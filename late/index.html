@@ -376,6 +376,7 @@ th{background:var(--teal-l);color:var(--teal);font-weight:700}
         <button class="btn sec sm" data-range="month">هذا الشهر</button>
         <button class="btn sec sm" data-range="term">منذ بداية الفصل</button>
         <button class="btn sm" id="btn-report">عرض التقرير</button>
+        <button class="btn sec sm" id="btn-late-export" title="ملف CSV يُستورد في برنامج التأخر الصباحي القديم">تصدير التأخر للنظام القديم</button>
       </div>
       <div id="report-body"></div>
     </div>
@@ -918,6 +919,26 @@ function reportTable(d) {
     </tbody></table></div>`;
 }
 
+// ---------------- تصدير التأخر (CSV) لبرنامج التأخر القديم ----------------
+async function exportLate() {
+  const btn = $('#btn-late-export');
+  await busy(btn, async () => {
+    const d = await api('lateExport', { from: $('#r-from').value, to: $('#r-to').value });
+    if (!d.rows.length) { toast('لا يوجد تأخر مسجّل في هذه الفترة.', true); return; }
+    const OLD = { 'أول متوسط': 'الأول متوسط', 'ثاني متوسط': 'الثاني متوسط', 'ثالث متوسط': 'الثالث متوسط' };
+    const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const lines = [['التاريخ', 'الاسم', 'الصف', 'الفصل', 'وقت الوصول', 'سجّله'].map(q).join(',')]
+      .concat(d.rows.map(r => [r.date, r.name, OLD[r.stage] || r.stage, r.sec, r.time, r.by].map(q).join(',')));
+    const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'تأخر_' + d.from + '_إلى_' + d.to + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast('تم تصدير ' + d.rows.length + ' سجل تأخر.');
+  });
+}
+
 // ---------------- الطباعة ----------------
 function printDoc(title, inner) {
   $('#print-area').innerHTML = `
@@ -995,6 +1016,7 @@ $('#t-report').addEventListener('click', e => {
   }
 });
 $('#btn-report').addEventListener('click', runReport);
+$('#btn-late-export').addEventListener('click', exportLate);
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.matches('tr[tabindex]')) e.target.click();
 });
