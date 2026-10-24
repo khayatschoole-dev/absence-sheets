@@ -7,6 +7,13 @@
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#0b6e67">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-main-180.png">
+<link rel="icon" type="image/png" href="icon-main-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="رصد الغياب">
 <title>رصد الغياب</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -380,6 +387,8 @@ th{background:var(--teal-l);color:var(--teal);font-weight:700}
 <script>
 'use strict';
 // ضع هنا رابط تطبيق الويب من Apps Script (ينتهي بـ /exec). الرابط ليس سرًّا؛ الحماية في الرموز والجلسات على الخادم.
+// main: تطبيق رصد الغياب — late: نسخة التأخر الصباحي (أيقونة مستقلة على الجوال)
+const APP_MODE = 'main';
 const API_URL = 'https://script.google.com/macros/s/AKfycbzAJ4oCYZeDPnKrNUG9g4OFxIgo-ejEN3TsGntNU7UGSc9YJGcOxO3ICAg5DGzjaUImww/exec';
 
 const $ = s => document.querySelector(s);
@@ -499,7 +508,7 @@ function route() {
   $$('.admin-only').forEach(b => b.classList.toggle('hidden', S.role !== 'admin'));
   $('#btn-back-dash').classList.toggle('hidden', S.role !== 'admin');
   if (S.role === 'teacher') { MODE = 'abs'; show('v-classes'); loadClasses(); }
-  else if (S.role === 'gate') { openLate(); }
+  else if (S.role === 'gate' || (APP_MODE === 'late' && S.role === 'admin')) { openLate(); }
   else { show('v-dash'); openTab('today'); }
 }
 
