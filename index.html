@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#0B7A75">
+<title>رصد الغياب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --teal:#0B7A75; --teal-d:#08605C; --teal-l:#E3F2F0;
+  --green:#2F8F4E; --green-l:#E6F4EA;
+  --grey:#5E6B69; --grey-l:#EEF2F1; --line:#D9E2E0;
+  --bg:#F5F8F7; --ink:#1C2826;
+  --absent:#B42318; --absent-l:#FDECEA;
+  --excused:#9A6700; --excused-l:#FFF4D6;
+  --r-s:8px; --r-m:12px;
+  font-family:"IBM Plex Sans Arabic", Tahoma, "Segoe UI", sans-serif;
+  color:var(--ink); background:var(--bg);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;min-height:100vh;background:var(--bg);font-size:16px;line-height:1.6}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #F2B705;outline-offset:2px}
+.hidden{display:none!important}
+.muted{color:var(--grey)}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+
+/* شريط السدو — بألوان المنصة فقط */
+.sadu{height:12px;background:
+  linear-gradient(135deg,var(--green) 25%,transparent 25%) -6px 0/12px 12px,
+  linear-gradient(225deg,var(--green) 25%,transparent 25%) -6px 0/12px 12px,
+  linear-gradient(315deg,#fff 25%,transparent 25%) 0 0/12px 12px,
+  linear-gradient(45deg,#fff 25%,transparent 25%) 0 0/12px 12px,
+  var(--grey);}
+.sadu.thin{height:6px;background-size:6px 6px}
+
+header.top{background:var(--teal);color:#fff;position:sticky;top:env(safe-area-inset-top,0px);z-index:20}
+header.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.brand{font-weight:700;font-size:1.05rem;line-height:1.3}
+.brand small{display:block;font-weight:400;opacity:.85;font-size:.8rem}
+.who{margin-inline-start:auto;text-align:end;font-size:.85rem;line-height:1.3}
+.who b{display:block;font-weight:600}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:var(--r-s);padding:6px 12px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--teal);z-index:30}
+
+.btn{border:0;border-radius:var(--r-s);padding:10px 18px;font-weight:600;background:var(--teal);color:#fff}
+.btn:hover{background:var(--teal-d)}
+.btn:disabled{opacity:.6;cursor:wait}
+.btn.sec{background:#fff;color:var(--teal);border:1px solid var(--teal)}
+.btn.sm{padding:6px 12px;font-size:.9rem}
+
+/* الدخول */
+.login{max-width:420px;margin:8vh auto 0;padding:0 16px}
+.login .card{background:#fff;border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden}
+.login .card .in{padding:24px}
+.login h1{margin:0 0 4px;font-size:1.5rem;color:var(--teal-d)}
+.field{display:block;margin:16px 0}
+.field span{display:block;font-weight:600;margin-bottom:6px}
+.field input{width:100%;padding:12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;font-size:1.1rem}
+.err{color:var(--absent);min-height:1.6em;margin:0}
+
+/* المعلم: الفصول */
+h2.page{font-size:1.3rem;margin:8px 0 2px;color:var(--teal-d)}
+.class-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:16px}
+.class-btn{background:#fff;border:1px solid var(--line);border-radius:var(--r-m);padding:14px;text-align:start;display:flex;flex-direction:column;gap:2px;border-inline-start:5px solid var(--line)}
+.class-btn b{font-size:1.15rem}
+.class-btn.done{border-inline-start-color:var(--green)}
+.class-btn .st{font-size:.85rem;color:var(--grey)}
+.class-btn.done .st{color:var(--green)}
+.stage-h{grid-column:1/-1;margin:14px 0 0;font-size:1rem;color:var(--grey);font-weight:600;border-bottom:1px solid var(--line);padding-bottom:4px}
+.stage-h:first-child{margin-top:0}
+
+/* المعلم: الطلاب */
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hint{background:var(--teal-l);border-radius:var(--r-s);padding:8px 12px;font-size:.9rem;margin-top:12px}
+.stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin:14px 0 110px}
+.stu{background:#fff;border:1px solid var(--line);border-radius:var(--r-s);padding:12px;text-align:start;min-height:64px;display:flex;flex-direction:column;justify-content:space-between;transition:background .15s,border-color .15s}
+.stu .tag{font-size:.8rem;color:var(--grey)}
+.stu[aria-pressed="true"]{background:var(--absent-l);border-color:var(--absent);color:var(--absent)}
+.stu[aria-pressed="true"] .tag{color:var(--absent);font-weight:700}
+.save-bar{position:fixed;inset:auto 0 0;background:#fff;border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));z-index:15}
+.save-bar .wrap{display:flex;align-items:center;gap:12px;padding:0}
+.save-bar .count{font-weight:600}
+.save-bar .btn{margin-inline-start:auto;min-width:160px}
+
+/* اللوحة */
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:12px 0 16px;overflow-x:auto}
+.tab{background:none;border:0;padding:10px 16px;font-weight:600;color:var(--grey);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--teal-d);border-bottom-color:var(--teal)}
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--r-m);padding:16px;margin-bottom:16px}
+.panel h3{margin:0 0 10px;font-size:1.05rem;color:var(--teal-d)}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden;margin-bottom:16px}
+.sum div{background:#fff;padding:12px 16px}
+.sum b{display:block;font-size:1.6rem;line-height:1.2}
+.sum span{color:var(--grey);font-size:.9rem}
+.notice{border-radius:var(--r-s);padding:10px 14px;margin-bottom:16px}
+.notice.ok{background:var(--green-l);color:var(--green)}
+.notice.wait{background:var(--grey-l)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:start;vertical-align:middle}
+th{background:var(--grey-l);font-weight:600;white-space:nowrap}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--teal-l)}
+.chip{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.82rem;font-weight:600;white-space:nowrap;border:0}
+.chip.ok{background:var(--green-l);color:var(--green)}
+.chip.no{background:var(--grey-l);color:var(--grey)}
+.chip.ab{background:var(--absent-l);color:var(--absent)}
+.chip.ex{background:var(--excused-l);color:var(--excused)}
+button.chip{cursor:pointer}
+.wa{color:var(--green);font-weight:600;text-decoration:none;white-space:nowrap}
+.wa:hover{text-decoration:underline}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:12px}
+.controls label{display:flex;flex-direction:column;font-size:.85rem;font-weight:600;gap:4px}
+.controls input,.controls select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff}
+.lvl{font-weight:700;margin:16px 0 6px}
+.toast{position:fixed;inset-inline:16px;bottom:calc(90px + env(safe-area-inset-bottom,0px));margin:auto;max-width:420px;background:var(--ink);color:#fff;padding:12px 16px;border-radius:var(--r-s);z-index:50;text-align:center}
+.toast.bad{background:var(--absent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* الطباعة */
+#print-area{display:none}
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff}
+  body>*:not(#print-area){display:none!important}
+  #print-area{display:block;font-size:12px;color:#000}
+  .ph{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:12px}
+  .ph .c img{height:70px}
+  .ph .l{text-align:left}
+  #print-area h2{text-align:center;font-size:16px;margin:8px 0 12px}
+  #print-area th{background:#eee}
+  #print-area th,#print-area td{border:1px solid #999;padding:5px 6px}
+  #print-area h4{margin:14px 0 4px}
+  .sig{display:flex;justify-content:space-between;margin-top:40px}
+}
+</style>
+</head>
+<body>
+
+<header class="top hidden" id="hdr">
+  <div class="wrap">
+    <div class="brand"><span id="h-school"></span><small>رصد الغياب اليومي</small></div>
+    <div class="who"><b id="h-name"></b><span id="h-role"></span></div>
+    <button class="btn-ghost" id="btn-logout">خروج</button>
+  </div>
+  <div class="sadu thin"></div>
+</header>
+
+<!-- الدخول -->
+<main id="v-login" class="view login hidden">
+  <div class="card">
+    <div class="sadu"></div>
+    <div class="in">
+      <h1>رصد الغياب</h1>
+      <p class="muted" style="margin:0">أدخل رمز الدخول الذي سلّمته لك إدارة المدرسة.</p>
+      <label class="field"><span>رمز الدخول</span>
+        <input id="in-code" type="password" autocomplete="off" inputmode="numeric" maxlength="64"></label>
+      <p class="err" id="login-err" role="alert"></p>
+      <button class="btn" id="btn-login" style="width:100%">دخول</button>
+    </div>
+  </div>
+</main>
+
+<!-- الاسم -->
+<main id="v-name" class="view login hidden">
+  <div class="card">
+    <div class="sadu"></div>
+    <div class="in">
+      <h1>اسمك</h1>
+      <p class="muted" style="margin:0">يظهر اسمك مع كل رصد تقوم به في سجل المدرسة.</p>
+      <label class="field"><span>الاسم الثلاثي</span>
+        <input id="in-name" type="text" autocomplete="name" maxlength="60"></label>
+      <p class="err" id="name-err" role="alert"></p>
+      <button class="btn" id="btn-name" style="width:100%">متابعة</button>
+    </div>
+  </div>
+</main>
+
+<!-- الفصول -->
+<main id="v-classes" class="view wrap hidden">
+  <div class="bar">
+    <button class="btn sec sm hidden" id="btn-back-dash">رجوع إلى اللوحة</button>
+    <div><h2 class="page">اختر الفصل</h2><div class="muted" id="cls-date"></div></div>
+  </div>
+  <div class="class-grid" id="class-grid"></div>
+</main>
+
+<!-- طلاب الفصل -->
+<main id="v-class" class="view wrap hidden">
+  <div class="bar">
+    <button class="btn sec sm" id="btn-back-classes">الفصول</button>
+    <h2 class="page" id="class-title"></h2>
+  </div>
+  <p class="hint" id="class-hint">الجميع حاضرون مبدئيًا. اضغط على اسم الطالب الغائب.</p>
+  <div class="stu-grid" id="stu-grid"></div>
+  <div class="save-bar"><div class="wrap">
+    <span class="count" id="abs-count"></span>
+    <button class="btn" id="btn-save">حفظ الغياب</button>
+  </div></div>
+</main>
+
+<!-- لوحة الإدارة والمرشد -->
+<main id="v-dash" class="view wrap hidden">
+  <div class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-tab="today">غياب اليوم</button>
+    <button class="tab" role="tab" data-tab="alerts">تنبيهات التراكم</button>
+    <button class="tab" role="tab" data-tab="query">استعلام طالب</button>
+    <button class="tab" role="tab" data-tab="report">تقارير الفصول</button>
+    <button class="tab admin-only" role="tab" data-tab="entry">رصد فصل</button>
+  </div>
+
+  <section id="t-today" class="tpanel">
+    <div class="controls">
+      <label>التاريخ<input type="date" id="d-date"></label>
+      <button class="btn sm" id="btn-refresh">تحديث</button>
+      <button class="btn sec sm" id="btn-print-day">طباعة تقرير اليوم</button>
+    </div>
+    <div id="today-body"><p class="muted">جارٍ التحميل…</p></div>
+  </section>
+
+  <section id="t-alerts" class="tpanel hidden"><div id="alerts-body"></div></section>
+
+  <section id="t-query" class="tpanel hidden">
+    <div class="panel">
+      <div class="controls">
+        <label style="flex:1;min-width:200px">اسم الطالب أو معرّفه<input type="search" id="q-in" maxlength="60"></label>
+        <button class="btn sm" id="btn-q">بحث</button>
+      </div>
+      <div id="q-results"></div>
+    </div>
+    <div id="q-history"></div>
+  </section>
+
+  <section id="t-report" class="tpanel hidden">
+    <div class="panel">
+      <div class="controls">
+        <label>المرحلة<select id="r-stage"><option value="">جميع المراحل</option></select></label>
+        <label>الفصل<select id="r-cls"><option value="">جميع الفصول</option></select></label>
+        <label>من<input type="date" id="r-from"></label>
+        <label>إلى<input type="date" id="r-to"></label>
+        <button class="btn sec sm" data-range="week">هذا الأسبوع</button>
+        <button class="btn sec sm" data-range="month">هذا الشهر</button>
+        <button class="btn sec sm" data-range="term">منذ بداية الفصل</button>
+        <button class="btn sm" id="btn-report">عرض التقرير</button>
+      </div>
+      <div id="report-body"></div>
+    </div>
+  </section>
+</main>
+
+<div id="print-area"></div>
+
+<script>
+'use strict';
+// ضع هنا رابط تطبيق الويب من Apps Script (ينتهي بـ /exec). الرابط ليس سرًّا؛ الحماية في الرموز والجلسات على الخادم.
+const API_URL = 'https://script.google.com/macros/s/AKfycbzAJ4oCYZeDPnKrNUG9g4OFxIgo-ejEN3TsGntNU7UGSc9YJGcOxO3ICAg5DGzjaUImww/exec';
+
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const EXC = 'بعذر', UNEXC = 'بدون عذر';
+
+let S = (() => { try { return JSON.parse(sessionStorage.getItem('rg_s')) || {}; } catch (e) { return {}; } })();
+const saveS = () => { try { sessionStorage.setItem('rg_s', JSON.stringify(S)); } catch (e) {} };
+
+async function api(action, data = {}) {
+  if (!/^https:\/\/script\.google\.com\//.test(API_URL)) throw new Error('لم يُضبط رابط الخادم بعد داخل index.html.');
+  let res, j;
+  try {
+    res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, token: S.token, ...data }) });
+  } catch (e) { throw new Error('تعذر الاتصال بالخادم. تحقق من الإنترنت.'); }
+  try { j = await res.json(); } catch (e) { throw new Error('استجابة غير متوقعة من الخادم.'); }
+  if (!j.ok) {
+    if (j.code === 'AUTH' || j.code === 'OFF') { endSession(j.error); }
+    const err = new Error(j.error || 'حدث خطأ.'); err.code = j.code; throw err;
+  }
+  return j.data;
+}
+
+function toast(msg, bad) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (bad ? ' bad' : ''); t.setAttribute('role', 'status'); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 3500);
+}
+async function busy(btn, fn) {
+  const txt = btn.textContent; btn.disabled = true; btn.textContent = 'جارٍ…';
+  try { return await fn(); } catch (e) { toast(e.message, true); } finally { btn.disabled = false; btn.textContent = txt; }
+}
+function show(id) {
+  $$('.view').forEach(v => v.classList.toggle('hidden', v.id !== id));
+  $('#hdr').classList.toggle('hidden', id === 'v-login');
+  window.scrollTo(0, 0);
+}
+
+// التاريخ الهجري والميلادي
+function dParse(d) { const [y, m, dd] = d.split('-').map(Number); return new Date(y, m - 1, dd, 12); }
+function dStr(dt) { return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0'); }
+function dLabel(d) {
+  const dt = dParse(d);
+  const day = new Intl.DateTimeFormat('ar-SA', { weekday: 'long' }).format(dt);
+  let h = '';
+  try { h = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' }).format(dt); } catch (e) {}
+  return day + ' ' + h + ' — ' + d;
+}
+
+function waLink(phone, text) {
+  let p = String(phone || '').replace(/\D/g, '');
+  if (p.startsWith('00')) p = p.slice(2);
+  if (p.startsWith('05')) p = '966' + p.slice(1);
+  else if (p.length === 9 && p.startsWith('5')) p = '966' + p;
+  if (!/^9665\d{8}$/.test(p)) return '';
+  return 'https://wa.me/' + p + '?text=' + encodeURIComponent(text);
+}
+
+// تجميع الفصول حسب المرحلة مع الحفاظ على الترتيب القادم من الخادم
+function byStage(classes) {
+  const out = [];
+  classes.forEach(c => {
+    const st = c.stage || 'بدون مرحلة';
+    let g = out.find(x => x.stage === st);
+    if (!g) out.push(g = { stage: st, classes: [] });
+    g.classes.push(c);
+  });
+  return out;
+}
+
+// ---------------- الدخول ----------------
+async function doLogin() {
+  const code = $('#in-code').value.trim();
+  $('#login-err').textContent = '';
+  if (code.length < 6) { $('#login-err').textContent = 'الرمز يتكون من 6 خانات على الأقل.'; return; }
+  await busy($('#btn-login'), async () => {
+    try {
+      const d = await api('login', { code });
+      S = { ...d, name: '' }; saveS();
+      $('#in-code').value = '';
+      let saved = ''; try { saved = localStorage.getItem('rg_name') || ''; } catch (e) {}
+      $('#in-name').value = saved;
+      show('v-name'); $('#in-name').focus();
+    } catch (e) { $("#login-err").textContent = e.message; }
+  });
+}
+async function doName() {
+  const name = $('#in-name').value.replace(/\s+/g, ' ').trim();
+  $('#name-err').textContent = '';
+  await busy($('#btn-name'), async () => {
+    try {
+      const d = await api('setName', { name });
+      S.name = d.name; saveS();
+      try { localStorage.setItem('rg_name', d.name); } catch (e) {}
+      route();
+    } catch (e) { $("#name-err").textContent = e.message; }
+  });
+}
+function endSession(msg) {
+  S = {}; saveS();
+  show('v-login');
+  if (msg) $('#login-err').textContent = msg;
+}
+async function logout() {
+  try { await api('logout'); } catch (e) {}
+  endSession('');
+}
+
+function route() {
+  if (!S.token) return show('v-login');
+  if (!S.name) return show('v-name');
+  $('#h-school').textContent = S.school || '';
+  $('#h-name').textContent = S.name;
+  $('#h-role').textContent = S.roleLabel || '';
+  $$('.admin-only').forEach(b => b.classList.toggle('hidden', S.role !== 'admin'));
+  $('#btn-back-dash').classList.toggle('hidden', S.role !== 'admin');
+  if (S.role === 'teacher') { show('v-classes'); loadClasses(); }
+  else { show('v-dash'); openTab('today'); }
+}
+
+// ---------------- المعلم ----------------
+async function loadClasses() {
+  const g = $('#class-grid');
+  g.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
+  try {
+    const d = await api('classes');
+    $('#cls-date').textContent = dLabel(d.date);
+    if (!d.classes.length) { g.innerHTML = '<p class="muted">لا يوجد طلاب بعد. تضيفهم الإدارة في ورقة "الطلاب".</p>'; return; }
+    g.innerHTML = byStage(d.classes).map(grp => `<h3 class="stage-h">${esc(grp.stage)}</h3>` + grp.classes.map(c => `
+      <button class="class-btn ${c.submitted ? 'done' : ''}" data-cls="${esc(c.cls)}">
+        <b>فصل ${esc(c.sec || c.cls)}</b>
+        <span class="st">${c.submitted ? 'تم الرصد، الغائبون: ' + c.absent : 'لم يُرصد بعد'}</span>
+        <span class="st">${c.count} طالبًا</span>
+      </button>`).join('')).join('');
+  } catch (e) { g.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
+}
+
+let CUR = { cls: '', students: [], absent: new Set() };
+async function openClass(cls) {
+  show('v-class');
+  $('#class-title').textContent = cls;
+  $('#stu-grid').innerHTML = '<p class="muted">جارٍ التحميل…</p>';
+  $('#abs-count').textContent = '';
+  try {
+    const d = await api('classStudents', { cls });
+    CUR = { cls, students: d.students, absent: new Set(d.absentIds) };
+    $('#class-hint').textContent = d.submitted
+      ? 'هذا الفصل مرصود اليوم. يمكنك تعديل الغياب ثم الحفظ.'
+      : 'الجميع حاضرون مبدئيًا. اضغط على اسم الطالب الغائب.';
+    renderClass();
+  } catch (e) { $('#stu-grid').innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
+}
+function renderClass() {
+  $('#stu-grid').innerHTML = CUR.students.map(s => {
+    const a = CUR.absent.has(s.id);
+    return `<button class="stu" data-id="${esc(s.id)}" aria-pressed="${a}"><span>${esc(s.name)}</span><span class="tag">${a ? 'غائب' : 'حاضر'}</span></button>`;
+  }).join('');
+  updateCount();
+}
+function updateCount() {
+  const n = CUR.absent.size;
+  $('#abs-count').textContent = 'الغائبون: ' + n + ' من ' + CUR.students.length;
+  $('#btn-save').textContent = n ? 'حفظ الغياب' : 'حفظ: لا يوجد غياب';
+}
+async function saveClass() {
+  await busy($('#btn-save'), async () => {
+    const d = await api('submitClass', { cls: CUR.cls, absentIds: [...CUR.absent] });
+    toast('تم حفظ غياب ' + d.cls + ' (' + d.absent + ' غائب)');
+    show('v-classes'); loadClasses();
+  });
+}
+
+// ---------------- اللوحة ----------------
+let DASH = null;
+function openTab(t) {
+  $$('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  if (t === 'entry') { show('v-classes'); loadClasses(); return; }
+  $$('.tpanel').forEach(p => p.classList.toggle('hidden', p.id !== 't-' + t));
+  if (t === 'today') loadToday();
+  if (t === 'alerts') loadAlerts();
+  if (t === 'report') prepReport();
+}
+
+async function loadToday() {
+  const body = $('#today-body');
+  if (!$('#d-date').value) $('#d-date').value = S.today;
+  body.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
+  try {
+    const d = DASH = await api('dashboard', { date: $('#d-date').value });
+    const done = d.classes.filter(c => c.submitted);
+    const inDone = done.reduce((a, c) => a + c.count, 0);
+    const pct = inDone ? Math.round(d.absent.length / inDone * 1000) / 10 : 0;
+    const missing = d.classes.filter(c => !c.submitted).map(c => c.cls);
+    const notice = !d.classes.length ? '' : missing.length
+      ? `<div class="notice wait">لم يُرصد بعد: ${missing.map(esc).join('، ')}</div>`
+      : `<div class="notice ok">اكتمل رصد جميع الفصول لهذا اليوم.</div>`;
+
+    body.innerHTML = `
+      <p class="muted" style="margin-top:0">${esc(dLabel(d.date))}</p>
+      <div class="sum">
+        <div><b>${d.absent.length}</b><span>غائبون</span></div>
+        <div><b>${done.length} / ${d.classes.length}</b><span>فصول مرصودة</span></div>
+        <div><b>${pct}%</b><span>نسبة الغياب في الفصول المرصودة</span></div>
+        <div><b>${d.totalStudents}</b><span>إجمالي الطلاب</span></div>
+      </div>
+      ${notice}
+      <div class="panel"><h3>المراحل</h3><div class="tbl-wrap"><table>
+        <thead><tr><th>المرحلة</th><th>الطلاب</th><th>فصول مرصودة</th><th>الغائبون</th><th>نسبة الغياب</th></tr></thead>
+        <tbody>${byStage(d.classes).map(grp => {
+          const dn = grp.classes.filter(c => c.submitted);
+          const st = dn.reduce((a, c) => a + c.count, 0);
+          const ab = dn.reduce((a, c) => a + c.absent, 0);
+          return `<tr class="click" data-filter="s:${esc(grp.stage)}" tabindex="0"><td><b>${esc(grp.stage)}</b></td>
+            <td>${grp.classes.reduce((a, c) => a + c.count, 0)}</td><td>${dn.length} / ${grp.classes.length}</td>
+            <td>${dn.length ? ab : '—'}</td><td>${st ? Math.round(ab / st * 1000) / 10 + '%' : '—'}</td></tr>`;
+        }).join('')}</tbody></table></div></div>
+      <div class="panel"><h3>الفصول</h3><div class="tbl-wrap"><table>
+        <thead><tr><th>الفصل</th><th>الطلاب</th><th>الحالة</th><th>الغائبون</th><th>رصد بواسطة</th></tr></thead>
+        <tbody>${d.classes.map(c => `<tr class="click" data-filter="${esc(c.cls)}" tabindex="0">
+          <td><b>${esc(c.cls)}</b></td><td>${c.count}</td>
+          <td>${c.submitted ? '<span class="chip ok">تم الرصد</span>' : '<span class="chip no">لم يُرصد</span>'}</td>
+          <td>${c.submitted ? c.absent : '—'}</td><td>${esc(c.by)} <span class="muted">${esc((c.time || '').slice(11))}</span></td></tr>`).join('')}
+        </tbody></table></div></div>
+      <div class="panel"><div class="bar" style="margin-bottom:10px"><h3 style="margin:0">الطلاب الغائبون</h3>
+        <select id="f-cls" style="margin-inline-start:auto;padding:6px 10px;border:1px solid var(--line);border-radius:8px">
+          <option value="">كل الطلاب الغائبين</option>${byStage(d.classes).map(grp => `<optgroup label="${esc(grp.stage)}">
+            <option value="s:${esc(grp.stage)}">كل ${esc(grp.stage)}</option>
+            ${grp.classes.map(c => `<option value="${esc(c.cls)}">${esc(c.cls)}</option>`).join('')}</optgroup>`).join('')}</select></div>
+        <div id="abs-table"></div></div>`;
+    renderAbsent('');
+  } catch (e) { body.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
+}
+
+function renderAbsent(f) {
+  const d = DASH; if (!d) return;
+  const stage = f && f.startsWith('s:') ? f.slice(2) : '';
+  const rows = d.absent.filter(a => !f || (stage ? (a.stage || 'بدون مرحلة') === stage : a.cls === f))
+    .sort((a, b) => clsOrder(a.cls) - clsOrder(b.cls) || a.name.localeCompare(b.name, 'ar'));
+  if (!rows.length) { $('#abs-table').innerHTML = '<p class="muted">لا يوجد غياب مسجّل.</p>'; return; }
+  $('#abs-table').innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr><th>الطالب</th><th>الفصل</th><th>أيام الغياب هذا الفصل</th><th>الحالة</th><th>ولي الأمر</th></tr></thead>
+    <tbody>${rows.map(a => {
+      const st = a.status === EXC ? 'ex' : 'ab';
+      const stCell = d.canEdit
+        ? `<button class="chip ${st}" data-toggle="${esc(a.id)}" title="اضغط للتبديل">${esc(a.status)}</button>`
+        : `<span class="chip ${st}">${esc(a.status)}</span>`;
+      const link = waLink(a.phone, `السلام عليكم ورحمة الله\nولي أمر الطالب: ${a.name}\nنفيدكم بغياب ابنكم يوم ${dLabel(d.date)}.\n${S.school}`);
+      return `<tr><td>${esc(a.name)}</td><td>${esc(a.cls)}</td><td>${a.total} <span class="muted">(بدون عذر ${a.unexcused})</span></td>
+        <td>${stCell}</td><td>${link ? `<a class="wa" href="${esc(link)}" target="_blank" rel="noopener noreferrer">واتساب</a>` : '<span class="muted">لا يوجد رقم</span>'}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function clsOrder(cls) { const i = DASH ? DASH.classes.findIndex(c => c.cls === cls) : -1; return i < 0 ? 999 : i; }
+
+async function toggleStatus(btn) {
+  const a = DASH.absent.find(x => x.id === btn.dataset.toggle);
+  const next = a.status === EXC ? UNEXC : EXC;
+  await busy(btn, async () => {
+    await api('setStatus', { date: DASH.date, id: a.id, status: next });
+    a.status = next;
+    if (next === EXC) a.unexcused--; else a.unexcused++;
+    renderAbsent($('#f-cls').value);
+    toast('تم تعديل حالة ' + a.name + ' إلى: ' + next);
+  });
+}
+
+async function loadAlerts() {
+  const b = $('#alerts-body');
+  b.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
+  try {
+    const d = await api('alerts');
+    if (!d.list.length) { b.innerHTML = '<div class="panel"><p class="muted" style="margin:0">لا يوجد طلاب بلغوا ' + d.levels[0] + ' أيام غياب بدون عذر.</p></div>'; return; }
+    const lv = d.levels.slice().reverse();
+    b.innerHTML = lv.map(l => {
+      const items = d.list.filter(x => x.level === l);
+      if (!items.length) return '';
+      return `<div class="panel"><h3>${l} أيام فأكثر بدون عذر (${items.length})</h3><div class="tbl-wrap"><table>
+        <thead><tr><th>الطالب</th><th>الفصل</th><th>بدون عذر</th><th>الإجمالي</th><th>ولي الأمر</th></tr></thead><tbody>
+        ${items.map(x => {
+          const link = waLink(x.phone, `السلام عليكم ورحمة الله\nولي أمر الطالب: ${x.name}\nنفيدكم بأن غياب ابنكم بدون عذر بلغ ${x.unexcused} أيام منذ بداية الفصل الدراسي، ونأمل مراجعة المدرسة.\n${S.school}`);
+          return `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td><span class="chip ab">${x.unexcused}</span></td><td>${x.total}</td>
+            <td>${link ? `<a class="wa" href="${esc(link)}" target="_blank" rel="noopener noreferrer">واتساب</a>` : '<span class="muted">لا يوجد رقم</span>'}</td></tr>`;
+        }).join('')}</tbody></table></div></div>`;
+    }).join('');
+  } catch (e) { b.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
+}
+
+async function search() {
+  const q = $('#q-in').value.trim();
+  const r = $('#q-results');
+  $('#q-history').innerHTML = '';
+  await busy($('#btn-q'), async () => {
+    const list = await api('searchStudents', { q });
+    r.innerHTML = list.length ? `<div class="tbl-wrap"><table><thead><tr><th>الطالب</th><th>الفصل</th><th>أيام الغياب</th><th>بدون عذر</th></tr></thead><tbody>
+      ${list.map(s => `<tr class="click" data-sid="${esc(s.id)}" tabindex="0"><td>${esc(s.name)}</td><td>${esc(s.cls)}</td><td>${s.total}</td><td>${s.unexcused}</td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="muted">لا توجد نتائج.</p>';
+  });
+}
+async function history(id) {
+  const h = $('#q-history');
+  h.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
+  try {
+    const d = await api('studentHistory', { id });
+    const ex = d.records.filter(r => r.status === EXC).length;
+    h.innerHTML = `<div class="panel"><h3>${esc(d.student.name)} — ${esc(d.student.cls)}</h3>
+      <p class="muted" style="margin-top:0">منذ بداية الفصل الدراسي: ${d.records.length} أيام غياب، منها ${ex} بعذر.</p>
+      ${d.records.length ? `<div class="tbl-wrap"><table><thead><tr><th>اليوم</th><th>الحالة</th><th>رصد بواسطة</th></tr></thead><tbody>
+      ${d.records.map(r => `<tr><td>${esc(dLabel(r.date))}</td><td><span class="chip ${r.status === EXC ? 'ex' : 'ab'}">${esc(r.status)}</span></td><td>${esc(r.by)}</td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="muted">لا يوجد غياب مسجّل.</p>'}</div>`;
+  } catch (e) { h.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
+}
+
+let REPORT = null;
+async function prepReport() {
+  if (!$('#r-from').value) setRange('week');
+  if ($('#r-cls').options.length > 1) return;
+  try {
+    if (!DASH) DASH = await api('dashboard', { date: S.today });
+    $('#r-stage').insertAdjacentHTML('beforeend', byStage(DASH.classes).map(g => `<option>${esc(g.stage)}</option>`).join(''));
+    $('#r-cls').insertAdjacentHTML('beforeend', DASH.classes.map(c => `<option>${esc(c.cls)}</option>`).join(''));
+  } catch (e) { toast(e.message, true); }
+}
+function setRange(k) {
+  const t = dParse(S.today);
+  let f = new Date(t);
+  if (k === 'week') f.setDate(t.getDate() - t.getDay());          // الأحد
+  else if (k === 'month') f = new Date(t.getFullYear(), t.getMonth(), 1, 12);
+  else f = dParse(S.termStart);
+  $('#r-from').value = dStr(f); $('#r-to').value = S.today;
+}
+async function runReport() {
+  const b = $('#report-body');
+  await busy($('#btn-report'), async () => {
+    const d = REPORT = await api('classReport', { stage: $('#r-stage').value, cls: $('#r-cls').value, from: $('#r-from').value, to: $('#r-to').value });
+    b.innerHTML = `<div class="bar" style="margin-bottom:8px"><span class="muted">من ${d.from} إلى ${d.to}، أيام دراسة مرصودة: ${d.schoolDays}</span>
+      <button class="btn sec sm" id="btn-print-rep" style="margin-inline-start:auto">طباعة</button></div>
+      ${reportTable(d)}`;
+  });
+}
+function reportTable(d) {
+  return `<div class="tbl-wrap"><table><thead><tr><th>م</th><th>الطالب</th><th>الفصل</th><th>أيام الغياب</th><th>بعذر</th><th>بدون عذر</th></tr></thead><tbody>
+    ${d.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${esc(r.cls)}</td><td>${r.total}</td><td>${r.excused}</td><td>${r.unexcused}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+// ---------------- الطباعة ----------------
+function printDoc(title, inner) {
+  $('#print-area').innerHTML = `
+    <div class="ph">
+      <div>المملكة العربية السعودية<br>وزارة التعليم<br>${esc(S.eduDept)}<br>${esc(S.school)}</div>
+      <div class="c"><img src="logo.png" alt="" onerror="this.remove()"></div>
+      <div class="l">تاريخ الطباعة: ${esc(dStr(new Date()))}</div>
+    </div>
+    <h2>${esc(title)}</h2>${inner}
+    <div class="sig"><span>وكيل شؤون الطلاب: ..................</span><span>مدير المدرسة: ..................</span></div>`;
+  window.print();
+}
+function printDay() {
+  const d = DASH; if (!d) return;
+  const by = {};
+  d.absent.forEach(a => (by[a.cls] = by[a.cls] || []).push(a));
+  const inner = `<p>عدد الغائبين: ${d.absent.length} — الفصول المرصودة: ${d.classes.filter(c => c.submitted).length} من ${d.classes.length}</p>` +
+    d.classes.filter(c => by[c.cls]).map(c => `<h4>${esc(c.cls)} (${by[c.cls].length})</h4>
+      <table><thead><tr><th>م</th><th>الطالب</th><th>الحالة</th><th>أيام الغياب هذا الفصل</th></tr></thead><tbody>
+      ${by[c.cls].map((a, i) => `<tr><td>${i + 1}</td><td>${esc(a.name)}</td><td>${esc(a.status)}</td><td>${a.total}</td></tr>`).join('')}
+      </tbody></table>`).join('');
+  printDoc('تقرير الغياب اليومي — ' + dLabel(d.date), inner);
+}
+
+// ---------------- الأحداث ----------------
+$('#btn-login').addEventListener('click', doLogin);
+$('#in-code').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+$('#btn-name').addEventListener('click', doName);
+$('#in-name').addEventListener('keydown', e => { if (e.key === 'Enter') doName(); });
+$('#btn-logout').addEventListener('click', logout);
+$('#class-grid').addEventListener('click', e => { const b = e.target.closest('[data-cls]'); if (b) openClass(b.dataset.cls); });
+$('#stu-grid').addEventListener('click', e => {
+  const b = e.target.closest('[data-id]'); if (!b) return;
+  const id = b.dataset.id;
+  CUR.absent.has(id) ? CUR.absent.delete(id) : CUR.absent.add(id);
+  const a = CUR.absent.has(id);
+  b.setAttribute('aria-pressed', a); b.querySelector('.tag').textContent = a ? 'غائب' : 'حاضر';
+  updateCount();
+});
+$('#btn-save').addEventListener('click', saveClass);
+$('#btn-back-classes').addEventListener('click', () => { show('v-classes'); loadClasses(); });
+$('#btn-back-dash').addEventListener('click', () => { show('v-dash'); openTab('today'); });
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) openTab(b.dataset.tab); });
+$('#btn-refresh').addEventListener('click', loadToday);
+$('#d-date').addEventListener('change', loadToday);
+$('#btn-print-day').addEventListener('click', printDay);
+$('#today-body').addEventListener('click', e => {
+  const t = e.target.closest('[data-toggle]'); if (t) return toggleStatus(t);
+  const r = e.target.closest('[data-filter]'); if (r) { $('#f-cls').value = r.dataset.filter; renderAbsent(r.dataset.filter); $('#f-cls').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+});
+$('#today-body').addEventListener('change', e => { if (e.target.id === 'f-cls') renderAbsent(e.target.value); });
+$('#btn-q').addEventListener('click', search);
+$('#q-in').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+$('#q-results').addEventListener('click', e => { const r = e.target.closest('[data-sid]'); if (r) history(r.dataset.sid); });
+$('#t-report').addEventListener('click', e => {
+  const r = e.target.closest('[data-range]'); if (r) setRange(r.dataset.range);
+  if (e.target.id === 'btn-print-rep' && REPORT) {
+    const cls = REPORT.cls || REPORT.stage || 'جميع المراحل';
+    printDoc('تقرير الغياب — ' + cls + ' — من ' + REPORT.from + ' إلى ' + REPORT.to, reportTable(REPORT));
+  }
+});
+$('#btn-report').addEventListener('click', runReport);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.matches('tr[tabindex]')) e.target.click();
+});
+
+route();
+</script>
+</body>
+</html>
