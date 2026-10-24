@@ -1,0 +1,24 @@
+{
+ "lang": "ar",
+ "dir": "rtl",
+ "display": "standalone",
+ "start_url": "./",
+ "scope": "./",
+ "background_color": "#0b6e67",
+ "theme_color": "#0b6e67",
+ "name": "التأخر الصباحي — متوسطة الشيخ عبدالله خياط",
+ "short_name": "التأخر الصباحي",
+ "icons": [
+  {
+   "src": "icon-late-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-late-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}
