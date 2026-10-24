@@ -88,6 +88,12 @@ h2.page{font-size:1.3rem;margin:8px 0 2px;color:var(--teal-d)}
 .stu .tag{font-size:.8rem;color:var(--grey)}
 .stu[aria-pressed="true"]{background:var(--absent-l);border-color:var(--absent);color:var(--absent)}
 .stu[aria-pressed="true"] .tag{color:var(--absent);font-weight:700}
+.stu.late[aria-pressed="true"],.stu.is-late{background:var(--excused-l);border-color:var(--excused);color:var(--excused)}
+.stu.late[aria-pressed="true"] .tag,.stu.is-late .tag{color:var(--excused);font-weight:700}
+.stu:disabled{cursor:default;opacity:.85}
+.stu .tag.warn{color:var(--absent)}
+.chip.lt{background:var(--excused-l);color:var(--excused)}
+.del{background:none;border:1px solid var(--line);border-radius:var(--r-s);padding:4px 10px;color:var(--absent);font-size:.85rem}
 .save-bar{position:fixed;inset:auto 0 0;background:#fff;border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));z-index:15}
 .save-bar .wrap{display:flex;align-items:center;gap:12px;padding:0}
 .save-bar .count{font-weight:600}
@@ -191,7 +197,8 @@ button.chip{cursor:pointer}
 <main id="v-classes" class="view wrap hidden">
   <div class="bar">
     <button class="btn sec sm hidden" id="btn-back-dash">رجوع إلى اللوحة</button>
-    <div><h2 class="page">اختر الفصل</h2><div class="muted" id="cls-date"></div></div>
+    <div><h2 class="page" id="cls-title">اختر الفصل</h2><div class="muted" id="cls-date"></div></div>
+    <button class="btn sec sm hidden" id="btn-latelog" style="margin-inline-start:auto">سجل تأخر اليوم</button>
   </div>
   <div class="class-grid" id="class-grid"></div>
 </main>
@@ -210,6 +217,15 @@ button.chip{cursor:pointer}
   </div></div>
 </main>
 
+<!-- سجل التأخر اليوم -->
+<main id="v-latelog" class="view wrap hidden">
+  <div class="bar">
+    <button class="btn sec sm" id="btn-latelog-back">الفصول</button>
+    <h2 class="page">سجل تأخر اليوم</h2>
+  </div>
+  <div class="panel" style="margin-top:12px"><div id="latelog-body"></div></div>
+</main>
+
 <!-- لوحة الإدارة والمرشد -->
 <main id="v-dash" class="view wrap hidden">
   <div class="tabs" role="tablist" id="tabs">
@@ -218,6 +234,7 @@ button.chip{cursor:pointer}
     <button class="tab" role="tab" data-tab="query">استعلام طالب</button>
     <button class="tab" role="tab" data-tab="report">تقارير الفصول</button>
     <button class="tab admin-only" role="tab" data-tab="entry">رصد فصل</button>
+    <button class="tab admin-only" role="tab" data-tab="late">تسجيل التأخر</button>
   </div>
 
   <section id="t-today" class="tpanel">
@@ -382,59 +399,119 @@ function route() {
   $('#h-role').textContent = S.roleLabel || '';
   $$('.admin-only').forEach(b => b.classList.toggle('hidden', S.role !== 'admin'));
   $('#btn-back-dash').classList.toggle('hidden', S.role !== 'admin');
-  if (S.role === 'teacher') { show('v-classes'); loadClasses(); }
+  if (S.role === 'teacher') { MODE = 'abs'; show('v-classes'); loadClasses(); }
+  else if (S.role === 'gate') { MODE = 'late'; show('v-classes'); loadClasses(); }
   else { show('v-dash'); openTab('today'); }
 }
 
 // ---------------- المعلم ----------------
+// MODE: 'abs' رصد الغياب، 'late' تسجيل التأخر الصباحي
+let MODE = 'abs';
 async function loadClasses() {
   const g = $('#class-grid');
+  const late = MODE === 'late';
+  $('#cls-title').textContent = late ? 'التأخر الصباحي: اختر الفصل' : 'اختر الفصل';
+  $('#btn-latelog').classList.toggle('hidden', !late);
   g.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
   try {
-    const d = await api('classes');
+    const d = await api(late ? 'lateClasses' : 'classes');
     $('#cls-date').textContent = dLabel(d.date);
     if (!d.classes.length) { g.innerHTML = '<p class="muted">لا يوجد طلاب بعد. تضيفهم الإدارة في ورقة "الطلاب".</p>'; return; }
-    g.innerHTML = byStage(d.classes).map(grp => `<h3 class="stage-h">${esc(grp.stage)}</h3>` + grp.classes.map(c => `
-      <button class="class-btn ${c.submitted ? 'done' : ''}" data-cls="${esc(c.cls)}">
-        <b>فصل ${esc(c.sec || c.cls)}</b>
-        <span class="st">${c.submitted ? 'تم الرصد، الغائبون: ' + c.absent : 'لم يُرصد بعد'}</span>
-        <span class="st">${c.count} طالبًا</span>
-      </button>`).join('')).join('');
+    g.innerHTML = byStage(d.classes).map(grp => `<h3 class="stage-h">${esc(grp.stage)}</h3>` + grp.classes.map(c => {
+      const done = late ? c.late > 0 : c.submitted;
+      const st = late ? (c.late ? 'متأخرون اليوم: ' + c.late : 'لا يوجد متأخرون')
+                      : (c.submitted ? 'تم الرصد، الغائبون: ' + c.absent : 'لم يُرصد بعد');
+      return `<button class="class-btn ${done ? 'done' : ''}" data-cls="${esc(c.cls)}">
+        <b>فصل ${esc(c.sec || c.cls)}</b><span class="st">${st}</span><span class="st">${c.count} طالبًا</span></button>`;
+    }).join('')).join('');
   } catch (e) { g.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
 }
 
-let CUR = { cls: '', students: [], absent: new Set() };
+let CUR = { cls: '', students: [], sel: new Set(), late: new Set(), absent: new Set() };
 async function openClass(cls) {
   show('v-class');
   $('#class-title').textContent = cls;
   $('#stu-grid').innerHTML = '<p class="muted">جارٍ التحميل…</p>';
   $('#abs-count').textContent = '';
   try {
-    const d = await api('classStudents', { cls });
-    CUR = { cls, students: d.students, absent: new Set(d.absentIds) };
-    $('#class-hint').textContent = d.submitted
-      ? 'هذا الفصل مرصود اليوم. يمكنك تعديل الغياب ثم الحفظ.'
-      : 'الجميع حاضرون مبدئيًا. اضغط على اسم الطالب الغائب.';
+    if (MODE === 'late') {
+      const d = await api('lateStudents', { cls });
+      CUR = { cls, students: d.students, sel: new Set(), late: new Set(d.lateIds), absent: new Set(d.absentIds) };
+      $('#class-hint').textContent = 'اضغط على أسماء الطلاب المتأخرين ثم سجّل. من كان مرصودًا غائبًا يُلغى غيابه تلقائيًا.';
+    } else {
+      const d = await api('classStudents', { cls });
+      CUR = { cls, students: d.students, sel: new Set(d.absentIds), late: new Set(d.lateIds || []), absent: new Set() };
+      $('#class-hint').textContent = d.submitted
+        ? 'هذا الفصل مرصود اليوم. يمكنك تعديل الغياب ثم الحفظ.'
+        : 'الجميع حاضرون مبدئيًا. اضغط على اسم الطالب الغائب.';
+    }
     renderClass();
   } catch (e) { $('#stu-grid').innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
 }
+function tileTag(id) {
+  if (MODE === 'late') {
+    if (CUR.late.has(id)) return 'مسجّل متأخر';
+    if (CUR.sel.has(id)) return 'متأخر';
+    return CUR.absent.has(id) ? '<span class="warn">مرصود غائب</span>' : 'حاضر';
+  }
+  if (CUR.late.has(id)) return 'متأخر صباحًا';
+  return CUR.sel.has(id) ? 'غائب' : 'حاضر';
+}
 function renderClass() {
+  const late = MODE === 'late';
   $('#stu-grid').innerHTML = CUR.students.map(s => {
-    const a = CUR.absent.has(s.id);
-    return `<button class="stu" data-id="${esc(s.id)}" aria-pressed="${a}"><span>${esc(s.name)}</span><span class="tag">${a ? 'غائب' : 'حاضر'}</span></button>`;
+    const locked = CUR.late.has(s.id);
+    const cls = 'stu' + (late ? ' late' : '') + (locked ? ' is-late' : '');
+    return `<button class="${cls}" data-id="${esc(s.id)}" aria-pressed="${CUR.sel.has(s.id)}" ${locked ? 'disabled' : ''}>
+      <span>${esc(s.name)}</span><span class="tag">${tileTag(s.id)}</span></button>`;
   }).join('');
   updateCount();
 }
 function updateCount() {
-  const n = CUR.absent.size;
-  $('#abs-count').textContent = 'الغائبون: ' + n + ' من ' + CUR.students.length;
-  $('#btn-save').textContent = n ? 'حفظ الغياب' : 'حفظ: لا يوجد غياب';
+  const n = CUR.sel.size;
+  if (MODE === 'late') {
+    $('#abs-count').textContent = 'المحدَّدون: ' + n + (CUR.late.size ? ' — مسجّلون سابقًا: ' + CUR.late.size : '');
+    $('#btn-save').textContent = 'تسجيل التأخر';
+    $('#btn-save').disabled = !n;
+  } else {
+    $('#abs-count').textContent = 'الغائبون: ' + n + ' من ' + CUR.students.length;
+    $('#btn-save').textContent = n ? 'حفظ الغياب' : 'حفظ: لا يوجد غياب';
+    $('#btn-save').disabled = false;
+  }
 }
 async function saveClass() {
   await busy($('#btn-save'), async () => {
-    const d = await api('submitClass', { cls: CUR.cls, absentIds: [...CUR.absent] });
-    toast('تم حفظ غياب ' + d.cls + ' (' + d.absent + ' غائب)');
+    if (MODE === 'late') {
+      const d = await api('addLate', { cls: CUR.cls, ids: [...CUR.sel] });
+      toast('تم تسجيل ' + d.added + ' متأخر في ' + d.cls + (d.cancelled.length ? '، وأُلغي غياب: ' + d.cancelled.join('، ') : ''));
+    } else {
+      const d = await api('submitClass', { cls: CUR.cls, absentIds: [...CUR.sel] });
+      toast('تم حفظ غياب ' + d.cls + ' (' + d.absent + ' غائب)');
+    }
     show('v-classes'); loadClasses();
+  });
+  updateCount();
+}
+
+async function loadLateLog() {
+  show('v-latelog');
+  const b = $('#latelog-body');
+  b.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
+  try {
+    const d = await api('lateToday');
+    b.innerHTML = `<p class="muted" style="margin-top:0">${esc(dLabel(d.date))}، المتأخرون: ${d.list.length}</p>` +
+      (d.list.length ? `<div class="tbl-wrap"><table><thead><tr><th>الطالب</th><th>الفصل</th><th>الوصول</th><th>سجّله</th><th></th></tr></thead><tbody>
+      ${d.list.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td>${esc(x.time)}</td><td>${esc(x.by)}</td>
+        <td><button class="del" data-del="${esc(x.id)}" data-name="${esc(x.name)}">حذف</button></td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="muted">لم يُسجَّل أي تأخر اليوم.</p>');
+  } catch (e) { b.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
+}
+async function deleteLate(btn) {
+  if (!confirm('حذف تأخر ' + btn.dataset.name + '؟\nملاحظة: إن كان غيابه قد أُلغي، لن يعود تلقائيًا.')) return;
+  await busy(btn, async () => {
+    await api('deleteLate', { id: btn.dataset.del });
+    toast('تم حذف تأخر ' + btn.dataset.name);
+    loadLateLog();
   });
 }
 
@@ -442,7 +519,7 @@ async function saveClass() {
 let DASH = null;
 function openTab(t) {
   $$('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
-  if (t === 'entry') { show('v-classes'); loadClasses(); return; }
+  if (t === 'entry' || t === 'late') { MODE = t === 'late' ? 'late' : 'abs'; show('v-classes'); loadClasses(); return; }
   $$('.tpanel').forEach(p => p.classList.toggle('hidden', p.id !== 't-' + t));
   if (t === 'today') loadToday();
   if (t === 'alerts') loadAlerts();
@@ -469,6 +546,7 @@ async function loadToday() {
         <div><b>${d.absent.length}</b><span>غائبون</span></div>
         <div><b>${done.length} / ${d.classes.length}</b><span>فصول مرصودة</span></div>
         <div><b>${pct}%</b><span>نسبة الغياب في الفصول المرصودة</span></div>
+        <div><b>${d.late.length}</b><span>متأخرون صباحًا</span></div>
         <div><b>${d.totalStudents}</b><span>إجمالي الطلاب</span></div>
       </div>
       ${notice}
@@ -494,7 +572,14 @@ async function loadToday() {
           <option value="">كل الطلاب الغائبين</option>${byStage(d.classes).map(grp => `<optgroup label="${esc(grp.stage)}">
             <option value="s:${esc(grp.stage)}">كل ${esc(grp.stage)}</option>
             ${grp.classes.map(c => `<option value="${esc(c.cls)}">${esc(c.cls)}</option>`).join('')}</optgroup>`).join('')}</select></div>
-        <div id="abs-table"></div></div>`;
+        <div id="abs-table"></div></div>
+      <div class="panel"><h3>المتأخرون صباحًا (${d.late.length})</h3>${d.late.length ? `<div class="tbl-wrap"><table>
+        <thead><tr><th>الطالب</th><th>الفصل</th><th>الوصول</th><th>مرات التأخر هذا الفصل</th><th>ولي الأمر</th></tr></thead><tbody>
+        ${d.late.map(x => {
+          const link = waLink(x.phone, `السلام عليكم ورحمة الله\nولي أمر الطالب: ${x.name}\nنفيدكم بتأخر ابنكم صباح يوم ${dLabel(d.date)}، ووصوله الساعة ${x.time}.\n${S.school}`);
+          return `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td>${esc(x.time)}</td><td><span class="chip lt">${x.lateTotal}</span></td>
+            <td>${link ? `<a class="wa" href="${esc(link)}" target="_blank" rel="noopener noreferrer">واتساب</a>` : '<span class="muted">لا يوجد رقم</span>'}</td></tr>`;
+        }).join('')}</tbody></table></div>` : '<p class="muted">لا يوجد تأخر مسجّل.</p>'}</div>`;
     renderAbsent('');
   } catch (e) { body.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
 }
@@ -537,7 +622,18 @@ async function loadAlerts() {
   b.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
   try {
     const d = await api('alerts');
-    if (!d.list.length) { b.innerHTML = '<div class="panel"><p class="muted" style="margin:0">لا يوجد طلاب بلغوا ' + d.levels[0] + ' أيام غياب بدون عذر.</p></div>'; return; }
+    const lateHtml = d.lateLevels.slice().reverse().map(l => {
+      const items = d.lateList.filter(x => x.level === l);
+      if (!items.length) return '';
+      return `<div class="panel"><h3>تأخر صباحي: ${l} مرات فأكثر (${items.length})</h3><div class="tbl-wrap"><table>
+        <thead><tr><th>الطالب</th><th>الفصل</th><th>مرات التأخر</th><th>ولي الأمر</th></tr></thead><tbody>
+        ${items.map(x => {
+          const link = waLink(x.phone, `السلام عليكم ورحمة الله\nولي أمر الطالب: ${x.name}\nنفيدكم بأن تأخر ابنكم صباحًا بلغ ${x.late} مرات منذ بداية الفصل الدراسي، ونأمل الحرص على حضوره مبكرًا.\n${S.school}`);
+          return `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td><span class="chip lt">${x.late}</span></td>
+            <td>${link ? `<a class="wa" href="${esc(link)}" target="_blank" rel="noopener noreferrer">واتساب</a>` : '<span class="muted">لا يوجد رقم</span>'}</td></tr>`;
+        }).join('')}</tbody></table></div></div>`;
+    }).join('');
+    if (!d.list.length) { b.innerHTML = '<div class="panel"><p class="muted" style="margin:0">لا يوجد طلاب بلغوا ' + d.levels[0] + ' أيام غياب بدون عذر.</p></div>' + lateHtml; return; }
     const lv = d.levels.slice().reverse();
     b.innerHTML = lv.map(l => {
       const items = d.list.filter(x => x.level === l);
@@ -549,7 +645,7 @@ async function loadAlerts() {
           return `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td><span class="chip ab">${x.unexcused}</span></td><td>${x.total}</td>
             <td>${link ? `<a class="wa" href="${esc(link)}" target="_blank" rel="noopener noreferrer">واتساب</a>` : '<span class="muted">لا يوجد رقم</span>'}</td></tr>`;
         }).join('')}</tbody></table></div></div>`;
-    }).join('');
+    }).join('') + lateHtml;
   } catch (e) { b.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
 }
 
@@ -559,8 +655,8 @@ async function search() {
   $('#q-history').innerHTML = '';
   await busy($('#btn-q'), async () => {
     const list = await api('searchStudents', { q });
-    r.innerHTML = list.length ? `<div class="tbl-wrap"><table><thead><tr><th>الطالب</th><th>الفصل</th><th>أيام الغياب</th><th>بدون عذر</th></tr></thead><tbody>
-      ${list.map(s => `<tr class="click" data-sid="${esc(s.id)}" tabindex="0"><td>${esc(s.name)}</td><td>${esc(s.cls)}</td><td>${s.total}</td><td>${s.unexcused}</td></tr>`).join('')}
+    r.innerHTML = list.length ? `<div class="tbl-wrap"><table><thead><tr><th>الطالب</th><th>الفصل</th><th>أيام الغياب</th><th>بدون عذر</th><th>التأخر</th></tr></thead><tbody>
+      ${list.map(s => `<tr class="click" data-sid="${esc(s.id)}" tabindex="0"><td>${esc(s.name)}</td><td>${esc(s.cls)}</td><td>${s.total}</td><td>${s.unexcused}</td><td>${s.late}</td></tr>`).join('')}
       </tbody></table></div>` : '<p class="muted">لا توجد نتائج.</p>';
   });
 }
@@ -574,7 +670,11 @@ async function history(id) {
       <p class="muted" style="margin-top:0">منذ بداية الفصل الدراسي: ${d.records.length} أيام غياب، منها ${ex} بعذر.</p>
       ${d.records.length ? `<div class="tbl-wrap"><table><thead><tr><th>اليوم</th><th>الحالة</th><th>رصد بواسطة</th></tr></thead><tbody>
       ${d.records.map(r => `<tr><td>${esc(dLabel(r.date))}</td><td><span class="chip ${r.status === EXC ? 'ex' : 'ab'}">${esc(r.status)}</span></td><td>${esc(r.by)}</td></tr>`).join('')}
-      </tbody></table></div>` : '<p class="muted">لا يوجد غياب مسجّل.</p>'}</div>`;
+      </tbody></table></div>` : '<p class="muted">لا يوجد غياب مسجّل.</p>'}
+      <h3 style="margin-top:16px">التأخر الصباحي (${d.lates.length})</h3>
+      ${d.lates.length ? `<div class="tbl-wrap"><table><thead><tr><th>اليوم</th><th>الوصول</th><th>سجّله</th></tr></thead><tbody>
+      ${d.lates.map(r => `<tr><td>${esc(dLabel(r.date))}</td><td>${esc(r.time)}</td><td>${esc(r.by)}</td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="muted">لا يوجد تأخر مسجّل.</p>'}</div>`;
   } catch (e) { h.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
 }
 
@@ -606,8 +706,8 @@ async function runReport() {
   });
 }
 function reportTable(d) {
-  return `<div class="tbl-wrap"><table><thead><tr><th>م</th><th>الطالب</th><th>الفصل</th><th>أيام الغياب</th><th>بعذر</th><th>بدون عذر</th></tr></thead><tbody>
-    ${d.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${esc(r.cls)}</td><td>${r.total}</td><td>${r.excused}</td><td>${r.unexcused}</td></tr>`).join('')}
+  return `<div class="tbl-wrap"><table><thead><tr><th>م</th><th>الطالب</th><th>الفصل</th><th>أيام الغياب</th><th>بعذر</th><th>بدون عذر</th><th>التأخر</th></tr></thead><tbody>
+    ${d.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${esc(r.cls)}</td><td>${r.total}</td><td>${r.excused}</td><td>${r.unexcused}</td><td>${r.late}</td></tr>`).join('')}
     </tbody></table></div>`;
 }
 
@@ -631,8 +731,10 @@ function printDay() {
     d.classes.filter(c => by[c.cls]).map(c => `<h4>${esc(c.cls)} (${by[c.cls].length})</h4>
       <table><thead><tr><th>م</th><th>الطالب</th><th>الحالة</th><th>أيام الغياب هذا الفصل</th></tr></thead><tbody>
       ${by[c.cls].map((a, i) => `<tr><td>${i + 1}</td><td>${esc(a.name)}</td><td>${esc(a.status)}</td><td>${a.total}</td></tr>`).join('')}
-      </tbody></table>`).join('');
-  printDoc('تقرير الغياب اليومي — ' + dLabel(d.date), inner);
+      </tbody></table>`).join('') +
+    (d.late.length ? `<h4>المتأخرون صباحًا (${d.late.length})</h4><table><thead><tr><th>م</th><th>الطالب</th><th>الفصل</th><th>وقت الوصول</th></tr></thead><tbody>
+      ${d.late.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td>${esc(x.time)}</td></tr>`).join('')}</tbody></table>` : '');
+  printDoc('تقرير الغياب والتأخر اليومي — ' + dLabel(d.date), inner);
 }
 
 // ---------------- الأحداث ----------------
@@ -643,16 +745,18 @@ $('#in-name').addEventListener('keydown', e => { if (e.key === 'Enter') doName()
 $('#btn-logout').addEventListener('click', logout);
 $('#class-grid').addEventListener('click', e => { const b = e.target.closest('[data-cls]'); if (b) openClass(b.dataset.cls); });
 $('#stu-grid').addEventListener('click', e => {
-  const b = e.target.closest('[data-id]'); if (!b) return;
+  const b = e.target.closest('[data-id]'); if (!b || b.disabled) return;
   const id = b.dataset.id;
-  CUR.absent.has(id) ? CUR.absent.delete(id) : CUR.absent.add(id);
-  const a = CUR.absent.has(id);
-  b.setAttribute('aria-pressed', a); b.querySelector('.tag').textContent = a ? 'غائب' : 'حاضر';
+  CUR.sel.has(id) ? CUR.sel.delete(id) : CUR.sel.add(id);
+  b.setAttribute('aria-pressed', CUR.sel.has(id)); b.querySelector('.tag').innerHTML = tileTag(id);
   updateCount();
 });
 $('#btn-save').addEventListener('click', saveClass);
 $('#btn-back-classes').addEventListener('click', () => { show('v-classes'); loadClasses(); });
-$('#btn-back-dash').addEventListener('click', () => { show('v-dash'); openTab('today'); });
+$('#btn-back-dash').addEventListener('click', () => { MODE = 'abs'; show('v-dash'); openTab('today'); });
+$('#btn-latelog').addEventListener('click', loadLateLog);
+$('#btn-latelog-back').addEventListener('click', () => { show('v-classes'); loadClasses(); });
+$('#latelog-body').addEventListener('click', e => { const b = e.target.closest('[data-del]'); if (b) deleteLate(b); });
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) openTab(b.dataset.tab); });
 $('#btn-refresh').addEventListener('click', loadToday);
 $('#d-date').addEventListener('change', loadToday);
