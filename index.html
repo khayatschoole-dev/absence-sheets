@@ -6,21 +6,21 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
-<meta name="theme-color" content="#0B7A75">
+<meta name="theme-color" content="#0b6e67">
 <title>رصد الغياب</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --teal:#0B7A75; --teal-d:#08605C; --teal-l:#E3F2F0;
-  --green:#2F8F4E; --green-l:#E6F4EA;
-  --grey:#5E6B69; --grey-l:#EEF2F1; --line:#D9E2E0;
-  --bg:#F5F8F7; --ink:#1C2826;
-  --absent:#B42318; --absent-l:#FDECEA;
-  --excused:#9A6700; --excused-l:#FFF4D6;
-  --r-s:8px; --r-m:12px;
-  font-family:"IBM Plex Sans Arabic", Tahoma, "Segoe UI", sans-serif;
+  --teal:#0b6e67; --teal-d:#0a6660; --teal-2:#13a295; --teal-l:#e6f4f2;
+  --green:#1e7a4f; --green-l:#e6f4ec;
+  --grey:#5b726e; --grey-l:#eef3f2; --line:#d4e4e1;
+  --bg:#f1f6f5; --ink:#1b2533;
+  --absent:#c0392b; --absent-l:#fbeceb;
+  --excused:#b9770e; --excused-l:#fdf3e1;
+  --r-s:10px; --r-m:14px;
+  font-family:"Tajawal", Tahoma, Arial, sans-serif;
   color:var(--ink); background:var(--bg);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -83,7 +83,7 @@ h2.page{font-size:1.3rem;margin:8px 0 2px;color:var(--teal-d)}
 /* المعلم: الطلاب */
 .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .hint{background:var(--teal-l);border-radius:var(--r-s);padding:8px 12px;font-size:.9rem;margin-top:12px}
-.stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin:14px 0 110px}
+.stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:14px 0 110px}
 .stu{background:#fff;border:1px solid var(--line);border-radius:var(--r-s);padding:12px;text-align:start;min-height:64px;display:flex;flex-direction:column;justify-content:space-between;transition:background .15s,border-color .15s}
 .stu .tag{font-size:.8rem;color:var(--grey)}
 .stu[aria-pressed="true"]{background:var(--absent-l);border-color:var(--absent);color:var(--absent)}
@@ -145,6 +145,63 @@ button.chip{cursor:pointer}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 /* الطباعة */
+
+/* ===== تصميم السدو — مطابق لتطبيق رصد الغياب ===== */
+:root{--sadu:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Crect width='48' height='24' fill='%230b6e67'/%3E%3Crect width='48' height='2' fill='%23cfdad8'/%3E%3Crect y='22' width='48' height='2' fill='%23cfdad8'/%3E%3Crect y='2.6' width='48' height='.8' fill='%23ffffff' fill-opacity='.7'/%3E%3Crect y='20.6' width='48' height='.8' fill='%23ffffff' fill-opacity='.7'/%3E%3Crect x='2' y='4.4' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='2' y='18' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='8' y='4.4' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='8' y='18' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='14' y='4.4' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='14' y='18' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='20' y='4.4' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='20' y='18' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='26' y='4.4' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='26' y='18' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='32' y='4.4' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='32' y='18' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='38' y='4.4' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='38' y='18' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='44' y='4.4' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Crect x='44' y='18' width='1.6' height='1.6' fill='%23ffffff'/%3E%3Cpath d='M12 6.4L17.6 12L12 17.6L6.4 12Z' fill='%23ffffff'/%3E%3Cpath d='M12 8.4L15.6 12L12 15.6L8.4 12Z' fill='%2313a295'/%3E%3Cpath d='M12 10.6L13.4 12L12 13.4L10.6 12Z' fill='%23cfdad8'/%3E%3Cpath d='M36 6.4L41.6 12L36 17.6L30.4 12Z' fill='%23ffffff'/%3E%3Cpath d='M36 8.4L39.6 12L36 15.6L32.4 12Z' fill='%2313a295'/%3E%3Cpath d='M36 10.6L37.4 12L36 13.4L34.6 12Z' fill='%23cfdad8'/%3E%3Cpath d='M-5 7.2L5 7.2L0 12Z M-5 16.8L5 16.8L0 12Z' fill='%239fb5b1'/%3E%3Cpath d='M19 7.2L29 7.2L24 12Z M19 16.8L29 16.8L24 12Z' fill='%239fb5b1'/%3E%3Cpath d='M43 7.2L53 7.2L48 12Z M43 16.8L53 16.8L48 12Z' fill='%239fb5b1'/%3E%3C/svg%3E")}
+.sadu-band{height:24px;background:var(--sadu) 0 0/48px 24px repeat-x}
+header.top{background:linear-gradient(135deg,#0a6660,#13a295)}
+header.top .brand{font-size:1.2rem}
+.btn-ghost{background:rgba(255,255,255,.12);border:0;border-radius:10px;padding:8px 14px}
+body::before{background:#0a6660}
+.wrap{padding-top:20px}
+.view.wrap>.bar:first-child{margin-top:4px}
+
+/* شاشة الدخول */
+.view.login{max-width:none;margin:0;min-height:100vh;display:grid;place-items:center;padding:56px 20px;position:relative;
+  background:linear-gradient(165deg,#0a6660 0%,#13a295 70%,#4fbcae 100%)}
+.view.login::before,.view.login::after{content:"";position:absolute;left:0;right:0;height:24px;background:var(--sadu) 0 0/48px 24px repeat-x}
+.view.login::before{top:0} .view.login::after{bottom:0}
+.login .card{position:relative;overflow:visible;max-width:380px;width:100%;border:0;border-radius:18px;box-shadow:0 18px 40px rgba(6,70,65,.25);text-align:center}
+.login .card .in{padding:52px 26px 46px}
+.login .card::after{content:"";position:absolute;left:0;right:0;bottom:0;height:16px;border-radius:0 0 18px 18px;background:var(--sadu) 0 0/32px 16px repeat-x}
+.login h1{color:var(--teal);font-size:1.9rem;font-weight:800}
+.login .field{text-align:right} .login .err{text-align:right}
+.medal{position:absolute;top:-38px;left:50%;transform:translateX(-50%);width:76px;height:76px;border-radius:50%;background:#fff;display:grid;place-items:center;
+  box-shadow:0 0 0 4px #fff,0 0 0 7px #0b6e67,0 0 0 10px #cfdad8,0 8px 20px rgba(6,70,65,.3);z-index:1}
+.field input{border:1.5px solid var(--line);border-radius:10px}
+
+/* عناوين وأقسام */
+h2.page{font-weight:800}
+.panel{border-radius:14px}
+.panel h3{display:flex;align-items:center;gap:10px;font-weight:700}
+.panel h3::before{content:"";width:9px;height:9px;border-radius:1px;background:#13a295;box-shadow:0 0 0 2px #cfdad8;transform:rotate(45deg);flex:none;margin-inline-start:3px}
+.stage-h{color:var(--teal);font-weight:700;border-bottom:0;position:relative;padding-bottom:14px}
+.stage-h::after{content:"";position:absolute;left:0;right:0;bottom:0;height:8px;background:var(--sadu) 0 0/16px 8px repeat-x;opacity:.9;border-radius:2px}
+
+/* التبويبات */
+.tabs{border-bottom:0;gap:6px;padding-bottom:4px}
+.tab{background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:8px 16px;margin:0;color:var(--teal)}
+.tab[aria-selected="true"]{background:var(--teal);color:#fff;border-color:var(--teal)}
+
+/* بطاقات الفصول */
+.class-btn{border:1.5px solid var(--line);border-top:4px solid var(--line);border-inline-start-width:1.5px;text-align:center;align-items:center}
+.class-btn b{color:var(--teal);font-size:1.25rem}
+.class-btn.done{border-color:var(--green);border-top-color:var(--green);background:var(--green-l)}
+
+/* بطاقات الطلاب: ختم "غائب" */
+.stu{border-radius:12px;border-width:1.5px}
+.stu[aria-pressed="true"]:not(.late) .tag{align-self:flex-start;border:2px solid var(--absent);border-radius:8px;padding:0 10px;transform:rotate(-8deg);font-weight:800}
+@media (prefers-reduced-motion:no-preference){.stu[aria-pressed="true"]:not(.late) .tag{animation:stamp .16s ease-out}@keyframes stamp{from{transform:rotate(-8deg) scale(.6);opacity:0}}}
+.save-bar{border-top:0;box-shadow:0 -6px 18px rgba(6,70,65,.12)}
+.save-bar::before{content:"";position:absolute;left:0;right:0;top:-8px;height:8px;background:var(--sadu) 0 0/16px 8px repeat-x}
+.btn{border-radius:10px}
+
+/* الملخص والجداول */
+.sum{border-radius:14px}
+.sum b{color:var(--teal);font-weight:800}
+th{background:var(--teal-l);color:var(--teal);font-weight:700}
+.chip{border-radius:99px}
+
 #print-area{display:none}
 @media print{
   @page{size:A4;margin:12mm}
@@ -170,13 +227,13 @@ button.chip{cursor:pointer}
     <div class="who"><b id="h-name"></b><span id="h-role"></span></div>
     <button class="btn-ghost" id="btn-logout">خروج</button>
   </div>
-  <div class="sadu thin"></div>
+  <div class="sadu-band" aria-hidden="true"></div>
 </header>
 
 <!-- الدخول -->
 <main id="v-login" class="view login hidden">
   <div class="card">
-    <div class="sadu"></div>
+    <div class="medal"><svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="22" fill="#0b6e67"/><path d="M17 26.5l6 6 12-13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div class="in">
       <h1>رصد الغياب</h1>
       <p class="muted" style="margin:0">أدخل رمز الدخول الذي سلّمته لك إدارة المدرسة.</p>
@@ -191,7 +248,7 @@ button.chip{cursor:pointer}
 <!-- الاسم -->
 <main id="v-name" class="view login hidden">
   <div class="card">
-    <div class="sadu"></div>
+    <div class="medal"><svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="22" fill="#0b6e67"/><path d="M17 26.5l6 6 12-13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div class="in">
       <h1>اسمك</h1>
       <p class="muted" style="margin:0">يظهر اسمك مع كل رصد تقوم به في سجل المدرسة.</p>
