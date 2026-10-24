@@ -93,6 +93,16 @@ h2.page{font-size:1.3rem;margin:8px 0 2px;color:var(--teal-d)}
 .stu:disabled{cursor:default;opacity:.85}
 .stu .tag.warn{color:var(--absent)}
 .chip.lt{background:var(--excused-l);color:var(--excused)}
+.inp{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;font-size:1rem}
+.res{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.res button{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:start;background:#fff;border:1px solid var(--line);border-radius:var(--r-s);padding:10px 12px}
+.res button .c{color:var(--grey);font-size:.85rem;white-space:nowrap}
+.res button.in{background:var(--excused-l);border-color:var(--excused)}
+.res button:disabled{opacity:.6;cursor:default}
+.bk{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.bk:last-child{border-bottom:0}
+.bk .c{color:var(--grey);font-size:.85rem}
+.bk .x{margin-inline-start:auto;background:none;border:1px solid var(--line);border-radius:999px;width:30px;height:30px;color:var(--absent);line-height:1}
 .del{background:none;border:1px solid var(--line);border-radius:var(--r-s);padding:4px 10px;color:var(--absent);font-size:.85rem}
 .save-bar{position:fixed;inset:auto 0 0;background:#fff;border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));z-index:15}
 .save-bar .wrap{display:flex;align-items:center;gap:12px;padding:0}
@@ -198,7 +208,6 @@ button.chip{cursor:pointer}
   <div class="bar">
     <button class="btn sec sm hidden" id="btn-back-dash">رجوع إلى اللوحة</button>
     <div><h2 class="page" id="cls-title">اختر الفصل</h2><div class="muted" id="cls-date"></div></div>
-    <button class="btn sec sm hidden" id="btn-latelog" style="margin-inline-start:auto">سجل تأخر اليوم</button>
   </div>
   <div class="class-grid" id="class-grid"></div>
 </main>
@@ -214,6 +223,39 @@ button.chip{cursor:pointer}
   <div class="save-bar"><div class="wrap">
     <span class="count" id="abs-count"></span>
     <button class="btn" id="btn-save">حفظ الغياب</button>
+  </div></div>
+</main>
+
+<!-- التأخر الصباحي: بحث + سلة + حفظ واحد -->
+<main id="v-late" class="view wrap hidden">
+  <div class="bar">
+    <button class="btn sec sm hidden" id="btn-late-dash">رجوع إلى اللوحة</button>
+    <div><h2 class="page">التأخر الصباحي</h2><div class="muted" id="late-date"></div></div>
+    <button class="btn sec sm" id="btn-latelog" style="margin-inline-start:auto">سجل تأخر اليوم</button>
+  </div>
+  <div class="panel" style="margin-top:12px">
+    <h3>بحث بالاسم من أي فصل</h3>
+    <input type="search" id="late-q" class="inp" placeholder="اكتب جزءًا من اسم الطالب" autocomplete="off" maxlength="40">
+    <div class="res" id="late-results"></div>
+  </div>
+  <div class="panel">
+    <h3>أو اختر من الفصل</h3>
+    <div class="controls">
+      <label>المرحلة<select id="late-stage"></select></label>
+      <label>الفصل<select id="late-cls"></select></label>
+      <button class="btn sec sm" id="late-all">إضافة الكل</button>
+      <button class="btn sec sm" id="late-none">إزالة الفصل</button>
+    </div>
+    <div class="stu-grid" id="late-grid" style="margin:0"></div>
+  </div>
+  <div class="panel" style="margin-bottom:110px">
+    <div class="bar" style="margin-bottom:6px"><h3 style="margin:0">المختارون (<span id="bk-n">0</span>)</h3>
+      <button class="btn sec sm" id="bk-clear" style="margin-inline-start:auto">إفراغ القائمة</button></div>
+    <div id="basket"></div>
+  </div>
+  <div class="save-bar"><div class="wrap">
+    <span class="count" id="late-count"></span>
+    <button class="btn" id="btn-late-save" disabled>حفظ التأخر</button>
   </div></div>
 </main>
 
@@ -400,7 +442,7 @@ function route() {
   $$('.admin-only').forEach(b => b.classList.toggle('hidden', S.role !== 'admin'));
   $('#btn-back-dash').classList.toggle('hidden', S.role !== 'admin');
   if (S.role === 'teacher') { MODE = 'abs'; show('v-classes'); loadClasses(); }
-  else if (S.role === 'gate') { MODE = 'late'; show('v-classes'); loadClasses(); }
+  else if (S.role === 'gate') { openLate(); }
   else { show('v-dash'); openTab('today'); }
 }
 
@@ -411,7 +453,6 @@ async function loadClasses() {
   const g = $('#class-grid');
   const late = MODE === 'late';
   $('#cls-title').textContent = late ? 'التأخر الصباحي: اختر الفصل' : 'اختر الفصل';
-  $('#btn-latelog').classList.toggle('hidden', !late);
   g.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
   try {
     const d = await api(late ? 'lateClasses' : 'classes');
@@ -493,6 +534,105 @@ async function saveClass() {
   updateCount();
 }
 
+// ---------------- التأخر الصباحي: بحث + سلة ----------------
+let R = { students: [], classes: [], late: new Set(), absent: new Set(), byId: {}, date: '' };
+let BASKET = new Set();
+const BK_KEY = 'rg_late_basket';
+const norm = t => String(t || '').replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
+
+function saveBasket() { try { localStorage.setItem(BK_KEY, JSON.stringify({ date: R.date, ids: [...BASKET] })); } catch (e) {} }
+function loadBasket() {
+  try {
+    const b = JSON.parse(localStorage.getItem(BK_KEY) || 'null');
+    if (b && b.date === R.date) return new Set(b.ids.filter(id => R.byId[id] && !R.late.has(id)));
+  } catch (e) {}
+  return new Set();
+}
+
+async function openLate() {
+  MODE = 'late';
+  show('v-late');
+  $('#btn-late-dash').classList.toggle('hidden', S.role !== 'admin');
+  $('#late-results').innerHTML = '';
+  $('#late-grid').innerHTML = '<p class="muted">جارٍ التحميل…</p>';
+  try {
+    const d = await api('lateRoster');
+    R = { students: d.students, classes: d.classes, late: new Set(d.lateIds), absent: new Set(d.absentIds), byId: {}, date: d.date };
+    d.students.forEach(s => { s.n = norm(s.name); R.byId[s.id] = s; });
+    $('#late-date').textContent = dLabel(d.date) + ' — المسجّلون اليوم: ' + R.late.size;
+    BASKET = loadBasket();
+    const stages = byStage(d.classes).map(g => g.stage);
+    const prevStage = $('#late-stage').value;
+    $('#late-stage').innerHTML = stages.map(st => `<option>${esc(st)}</option>`).join('');
+    if (stages.includes(prevStage)) $('#late-stage').value = prevStage;
+    fillLateClasses();
+    renderLateGrid(); renderResults(); renderBasket();
+  } catch (e) { $('#late-grid').innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
+}
+function fillLateClasses() {
+  const st = $('#late-stage').value, prev = $('#late-cls').value;
+  const list = R.classes.filter(c => (c.stage || 'بدون مرحلة') === st);
+  $('#late-cls').innerHTML = list.map(c => `<option value="${esc(c.cls)}">فصل ${esc(c.sec || c.cls)}</option>`).join('');
+  if (list.some(c => c.cls === prev)) $('#late-cls').value = prev;
+}
+function classStudents() { const c = $('#late-cls').value; return R.students.filter(s => s.cls === c); }
+function lateTag(id) {
+  if (R.late.has(id)) return 'مسجّل اليوم';
+  if (BASKET.has(id)) return 'مختار ✓';
+  return R.absent.has(id) ? '<span class="warn">مرصود غائب</span>' : 'حاضر';
+}
+function renderLateGrid() {
+  const list = classStudents();
+  $('#late-grid').innerHTML = list.length ? list.map(s => {
+    const locked = R.late.has(s.id);
+    return `<button class="stu late${locked ? ' is-late' : ''}" data-id="${esc(s.id)}" aria-pressed="${BASKET.has(s.id)}" ${locked ? 'disabled' : ''}>
+      <span>${esc(s.name)}</span><span class="tag">${lateTag(s.id)}</span></button>`;
+  }).join('') : '<p class="muted">لا يوجد طلاب في هذا الفصل.</p>';
+}
+function renderResults() {
+  const q = norm($('#late-q').value);
+  const box = $('#late-results');
+  if (q.length < 2) { box.innerHTML = ''; return; }
+  const hits = R.students.filter(s => s.n.includes(q)).slice(0, 15);
+  box.innerHTML = hits.length ? hits.map(s => {
+    const locked = R.late.has(s.id), inB = BASKET.has(s.id);
+    return `<button data-id="${esc(s.id)}" class="${inB ? 'in' : ''}" ${locked ? 'disabled' : ''}>
+      <span>${esc(s.name)} <span class="c">${esc(s.cls)}</span></span><span class="c">${lateTag(s.id)}</span></button>`;
+  }).join('') : '<p class="muted" style="margin:0">لا يوجد طالب بهذا الاسم.</p>';
+}
+function renderBasket() {
+  const ids = [...BASKET];
+  $('#bk-n').textContent = ids.length;
+  $('#basket').innerHTML = ids.length ? ids.map(id => {
+    const s = R.byId[id];
+    return `<div class="bk"><span>${esc(s.name)}</span><span class="c">${esc(s.cls)}</span>
+      ${R.absent.has(id) ? '<span class="chip ab">مرصود غائب</span>' : ''}
+      <button class="x" data-rm="${esc(id)}" aria-label="إزالة ${esc(s.name)}">×</button></div>`;
+  }).join('') : '<p class="muted" style="margin:0">ابحث عن الطالب أو اختر من الفصل، وسيبقى هنا حتى تحفظ.</p>';
+  $('#late-count').textContent = 'المختارون: ' + ids.length;
+  $('#btn-late-save').disabled = !ids.length;
+  $('#btn-late-save').textContent = ids.length ? 'حفظ التأخر (' + ids.length + ')' : 'حفظ التأخر';
+}
+function basketChanged() { saveBasket(); renderLateGrid(); renderResults(); renderBasket(); }
+function toggleBasket(id) {
+  if (R.late.has(id)) return;
+  BASKET.has(id) ? BASKET.delete(id) : BASKET.add(id);
+  basketChanged();
+}
+async function saveLate() {
+  if (!BASKET.size) return;
+  const btn = $('#btn-late-save');
+  await busy(btn, async () => {
+    const d = await api('addLate', { ids: [...BASKET] });
+    BASKET.clear(); saveBasket();
+    $('#late-q').value = '';
+    toast('تم حفظ تأخر ' + d.added + ' طالب' + (d.skipped ? '، و' + d.skipped + ' مسجّلون سابقًا' : '') +
+          (d.cancelled.length ? '، وأُلغي غياب: ' + d.cancelled.join('، ') : ''));
+    await openLate();
+  });
+  renderBasket();
+}
+
 async function loadLateLog() {
   show('v-latelog');
   const b = $('#latelog-body');
@@ -519,7 +659,8 @@ async function deleteLate(btn) {
 let DASH = null;
 function openTab(t) {
   $$('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
-  if (t === 'entry' || t === 'late') { MODE = t === 'late' ? 'late' : 'abs'; show('v-classes'); loadClasses(); return; }
+  if (t === 'entry') { MODE = 'abs'; show('v-classes'); loadClasses(); return; }
+  if (t === 'late') { openLate(); return; }
   $$('.tpanel').forEach(p => p.classList.toggle('hidden', p.id !== 't-' + t));
   if (t === 'today') loadToday();
   if (t === 'alerts') loadAlerts();
@@ -755,7 +896,18 @@ $('#btn-save').addEventListener('click', saveClass);
 $('#btn-back-classes').addEventListener('click', () => { show('v-classes'); loadClasses(); });
 $('#btn-back-dash').addEventListener('click', () => { MODE = 'abs'; show('v-dash'); openTab('today'); });
 $('#btn-latelog').addEventListener('click', loadLateLog);
-$('#btn-latelog-back').addEventListener('click', () => { show('v-classes'); loadClasses(); });
+$('#btn-latelog-back').addEventListener('click', openLate);
+$('#btn-late-dash').addEventListener('click', () => { show('v-dash'); openTab('today'); });
+$('#late-q').addEventListener('input', renderResults);
+$('#late-results').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b && !b.disabled) toggleBasket(b.dataset.id); });
+$('#late-stage').addEventListener('change', () => { fillLateClasses(); renderLateGrid(); });
+$('#late-cls').addEventListener('change', renderLateGrid);
+$('#late-grid').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b && !b.disabled) toggleBasket(b.dataset.id); });
+$('#late-all').addEventListener('click', () => { classStudents().forEach(s => { if (!R.late.has(s.id)) BASKET.add(s.id); }); basketChanged(); });
+$('#late-none').addEventListener('click', () => { classStudents().forEach(s => BASKET.delete(s.id)); basketChanged(); });
+$('#basket').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) toggleBasket(b.dataset.rm); });
+$('#bk-clear').addEventListener('click', () => { if (BASKET.size && confirm('إفراغ قائمة المختارين؟')) { BASKET.clear(); basketChanged(); } });
+$('#btn-late-save').addEventListener('click', saveLate);
 $('#latelog-body').addEventListener('click', e => { const b = e.target.closest('[data-del]'); if (b) deleteLate(b); });
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) openTab(b.dataset.tab); });
 $('#btn-refresh').addEventListener('click', loadToday);
