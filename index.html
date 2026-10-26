@@ -339,6 +339,7 @@ th{background:var(--teal-l);color:var(--teal);font-weight:700}
     <button class="tab" role="tab" data-tab="alerts">تنبيهات التراكم</button>
     <button class="tab" role="tab" data-tab="query">استعلام طالب</button>
     <button class="tab" role="tab" data-tab="report">تقارير الفصول</button>
+    <button class="tab" role="tab" data-tab="latereport">تقرير التأخر</button>
     <button class="tab admin-only" role="tab" data-tab="entry">رصد فصل</button>
     <button class="tab admin-only" role="tab" data-tab="late">تسجيل التأخر</button>
   </div>
@@ -365,6 +366,25 @@ th{background:var(--teal-l);color:var(--teal);font-weight:700}
     <div id="q-history"></div>
   </section>
 
+  <section id="t-latereport" class="tpanel hidden">
+    <div class="panel">
+      <div class="controls">
+        <label>المرحلة<select id="lr-stage"><option value="">جميع المراحل</option></select></label>
+        <label>الفصل<select id="lr-cls"><option value="">جميع الفصول</option></select></label>
+        <label>من<input type="date" id="lr-from"></label>
+        <label>إلى<input type="date" id="lr-to"></label>
+      </div>
+      <div class="controls">
+        <button class="btn sec sm" data-lrange="today">اليوم</button>
+        <button class="btn sec sm" data-lrange="week">هذا الأسبوع</button>
+        <button class="btn sec sm" data-lrange="month">هذا الشهر</button>
+        <button class="btn sec sm" data-lrange="term">منذ بداية الفصل</button>
+        <button class="btn sm" id="btn-lr-run">عرض التقرير</button>
+      </div>
+      <div id="lr-body"><p class="muted" style="margin:0">اختر الفترة ثم اضغط «عرض التقرير».</p></div>
+    </div>
+  </section>
+
   <section id="t-report" class="tpanel hidden">
     <div class="panel">
       <div class="controls">
@@ -376,7 +396,6 @@ th{background:var(--teal-l);color:var(--teal);font-weight:700}
         <button class="btn sec sm" data-range="month">هذا الشهر</button>
         <button class="btn sec sm" data-range="term">منذ بداية الفصل</button>
         <button class="btn sm" id="btn-report">عرض التقرير</button>
-        <button class="btn sec sm" id="btn-late-export" title="ملف CSV يُستورد في برنامج التأخر الصباحي القديم">تصدير التأخر للنظام القديم</button>
       </div>
       <div id="report-body"></div>
     </div>
@@ -732,6 +751,7 @@ function openTab(t) {
   if (t === 'today') loadToday();
   if (t === 'alerts') loadAlerts();
   if (t === 'report') prepReport();
+  if (t === 'latereport') prepLateReport();
 }
 
 async function loadToday() {
@@ -919,11 +939,102 @@ function reportTable(d) {
     </tbody></table></div>`;
 }
 
+// ---------------- تقرير التأخر الصباحي (مستقل عن الغياب) ----------------
+let LREP = null;
+async function prepLateReport() {
+  if (!$('#lr-from').value) setLrRange('week');
+  if ($('#lr-stage').options.length > 1) return;
+  try {
+    if (!DASH) DASH = await api('dashboard', { date: S.today });
+    $('#lr-stage').insertAdjacentHTML('beforeend', byStage(DASH.classes).map(g => `<option>${esc(g.stage)}</option>`).join(''));
+    fillLrClasses();
+  } catch (e) { toast(e.message, true); }
+}
+function fillLrClasses() {
+  if (!DASH) return;
+  const st = $('#lr-stage').value;
+  $('#lr-cls').innerHTML = '<option value="">جميع الفصول</option>' +
+    DASH.classes.filter(c => !st || c.stage === st).map(c => `<option>${esc(c.cls)}</option>`).join('');
+}
+function setLrRange(k) {
+  const t = dParse(S.today);
+  let f = new Date(t);
+  if (k === 'week') f.setDate(t.getDate() - t.getDay());
+  else if (k === 'month') f = new Date(t.getFullYear(), t.getMonth(), 1, 12);
+  else if (k === 'term') f = dParse(S.termStart);
+  $('#lr-from').value = dStr(f); $('#lr-to').value = S.today;
+}
+function lrFilter(rows) {
+  const st = $('#lr-stage').value, cl = $('#lr-cls').value;
+  return rows.map(r => ({ ...r, cls: r.stage ? r.stage + ' ' + r.sec : r.sec }))
+    .filter(r => (!st || r.stage === st) && (!cl || r.cls === cl));
+}
+const dayName = d => new Intl.DateTimeFormat('ar-SA', { weekday: 'long' }).format(dParse(d));
+async function runLateReport() {
+  const body = $('#lr-body');
+  await busy($('#btn-lr-run'), async () => {
+    const d = await api('lateExport', { from: $('#lr-from').value, to: $('#lr-to').value });
+    const rows = lrFilter(d.rows);
+    const per = {};
+    rows.forEach(r => { const k = r.name + '|' + r.cls; (per[k] = per[k] || { name: r.name, cls: r.cls, n: 0, last: '' }).n++; if (r.date > per[k].last) per[k].last = r.date; });
+    const sum = Object.values(per).sort((a, b) => b.n - a.n || clsOrder(a.cls) - clsOrder(b.cls));
+    const scope = $('#lr-cls').value || $('#lr-stage').value || 'جميع المراحل';
+    LREP = { from: d.from, to: d.to, scope, rows, sum };
+    if (!rows.length) { body.innerHTML = `<p class="muted" style="margin:0">لا يوجد تأخر مسجّل من ${d.from} إلى ${d.to} (${esc(scope)}).</p>`; return; }
+    body.innerHTML = `
+      <div class="sum" style="margin-top:4px">
+        <div><b>${rows.length}</b><span>حالة تأخر</span></div>
+        <div><b>${sum.length}</b><span>طالبًا متأخرًا</span></div>
+        <div><b>${new Set(rows.map(r => r.date)).size}</b><span>يومًا</span></div>
+      </div>
+      <div class="bar" style="margin-bottom:12px">
+        <span class="muted">${esc(scope)} — من ${d.from} إلى ${d.to}</span>
+        <button class="btn sm" id="btn-lr-print" style="margin-inline-start:auto">طباعة تقرير التأخر</button>
+        <button class="btn sec sm" id="btn-lr-csv">تصدير Excel</button>
+        <button class="btn sec sm" id="btn-late-export" title="ملف يُستورد في برنامج التأخر الصباحي القديم">تصدير للنظام القديم</button>
+      </div>
+      <h3>ملخص الطلاب</h3>${lrSumTable(sum)}
+      <h3 style="margin-top:18px">سجل التأخر</h3>${lrRowsTable(rows)}`;
+  });
+}
+function lrSumTable(sum) {
+  return `<div class="tbl-wrap"><table><thead><tr><th>م</th><th>الطالب</th><th>الفصل</th><th>مرات التأخر</th><th>آخر تأخر</th></tr></thead><tbody>
+    ${sum.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td><span class="chip lt">${x.n}</span></td><td>${esc(x.last)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+function lrRowsTable(rows) {
+  return `<div class="tbl-wrap"><table><thead><tr><th>م</th><th>التاريخ</th><th>اليوم</th><th>الطالب</th><th>الفصل</th><th>وقت الوصول</th><th>سجّله</th></tr></thead><tbody>
+    ${rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.date)}</td><td>${esc(dayName(r.date))}</td><td>${esc(r.name)}</td><td>${esc(r.cls)}</td><td>${esc(r.time)}</td><td>${esc(r.by)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+function printLateReport() {
+  if (!LREP) return;
+  const one = LREP.from === LREP.to;
+  printDoc('تقرير التأخر الصباحي — ' + LREP.scope + ' — ' + (one ? dLabel(LREP.from) : 'من ' + LREP.from + ' إلى ' + LREP.to),
+    `<p>عدد حالات التأخر: ${LREP.rows.length} — عدد الطلاب: ${LREP.sum.length}</p>` +
+    (one ? '' : '<h4>ملخص الطلاب</h4>' + lrSumTable(LREP.sum) + '<h4>سجل التأخر</h4>') + lrRowsTable(LREP.rows));
+}
+function downloadCsv(name, header, rows) {
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const text = '\ufeff' + [header].concat(rows).map(r => r.map(q).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+function exportLateCsv() {
+  if (!LREP) return;
+  downloadCsv('التأخر_الصباحي_' + LREP.from + '_إلى_' + LREP.to + '.csv',
+    ['التاريخ', 'اليوم', 'الاسم', 'المرحلة', 'الفصل', 'وقت الوصول', 'سجّله'],
+    LREP.rows.map(r => [r.date, dayName(r.date), r.name, r.stage, r.sec, r.time, r.by]));
+  toast('تم تصدير ' + LREP.rows.length + ' حالة تأخر.');
+}
+
 // ---------------- تصدير التأخر (CSV) لبرنامج التأخر القديم ----------------
 async function exportLate() {
   const btn = $('#btn-late-export');
   await busy(btn, async () => {
-    const d = await api('lateExport', { from: $('#r-from').value, to: $('#r-to').value });
+    const d = await api('lateExport', { from: $('#lr-from').value, to: $('#lr-to').value });
     if (!d.rows.length) { toast('لا يوجد تأخر مسجّل في هذه الفترة.', true); return; }
     const OLD = { 'أول متوسط': 'الأول متوسط', 'ثاني متوسط': 'الثاني متوسط', 'ثالث متوسط': 'الثالث متوسط' };
     const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
@@ -1016,7 +1127,14 @@ $('#t-report').addEventListener('click', e => {
   }
 });
 $('#btn-report').addEventListener('click', runReport);
-$('#btn-late-export').addEventListener('click', exportLate);
+$('#btn-lr-run').addEventListener('click', runLateReport);
+$('#lr-stage').addEventListener('change', fillLrClasses);
+$('#t-latereport').addEventListener('click', e => {
+  const r = e.target.closest('[data-lrange]'); if (r) { setLrRange(r.dataset.lrange); runLateReport(); }
+  if (e.target.id === 'btn-lr-print') printLateReport();
+  if (e.target.id === 'btn-lr-csv') exportLateCsv();
+  if (e.target.id === 'btn-late-export') exportLate();
+});
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.matches('tr[tabindex]')) e.target.click();
 });
