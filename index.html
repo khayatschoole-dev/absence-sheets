@@ -802,11 +802,10 @@ async function loadToday() {
             ${grp.classes.map(c => `<option value="${esc(c.cls)}">${esc(c.cls)}</option>`).join('')}</optgroup>`).join('')}</select></div>
         <div id="abs-table"></div></div>
       <div class="panel"><h3>المتأخرون صباحًا (${d.late.length})</h3>${d.late.length ? `<div class="tbl-wrap"><table>
-        <thead><tr><th>الطالب</th><th>الفصل</th><th>الوصول</th><th>مرات التأخر هذا الفصل</th><th>ولي الأمر</th></tr></thead><tbody>
+        <thead><tr><th>الطالب</th><th>الفصل</th><th>الوصول</th><th>مرات التأخر هذا الفصل</th></tr></thead><tbody>
         ${d.late.map(x => {
           const link = waLink(x.phone, `السلام عليكم ورحمة الله\nولي أمر الطالب: ${x.name}\nنفيدكم بتأخر ابنكم صباح يوم ${dLabel(d.date)}، ووصوله الساعة ${x.time}.\n${S.school}`);
-          return `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td>${esc(x.time)}</td><td><span class="chip lt">${x.lateTotal}</span></td>
-            <td>${link ? `<a class="wa" href="${esc(link)}" target="_blank" rel="noopener noreferrer">واتساب</a>` : '<span class="muted">لا يوجد رقم</span>'}</td></tr>`;
+          return `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td>${esc(x.time)}</td><td><span class="chip lt">${x.lateTotal}</span></td></tr>`;
         }).join('')}</tbody></table></div>` : '<p class="muted">لا يوجد تأخر مسجّل.</p>'}</div>`;
     renderAbsent('');
   } catch (e) { body.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
@@ -819,7 +818,7 @@ function renderAbsent(f) {
     .sort((a, b) => clsOrder(a.cls) - clsOrder(b.cls) || a.name.localeCompare(b.name, 'ar'));
   if (!rows.length) { $('#abs-table').innerHTML = '<p class="muted">لا يوجد غياب مسجّل.</p>'; return; }
   $('#abs-table').innerHTML = `<div class="tbl-wrap"><table>
-    <thead><tr><th>الطالب</th><th>الفصل</th><th>أيام الغياب هذا الفصل</th><th>الحالة</th><th>ولي الأمر</th></tr></thead>
+    <thead><tr><th>الطالب</th><th>الفصل</th><th>أيام الغياب هذا الفصل</th><th>الحالة</th></tr></thead>
     <tbody>${rows.map(a => {
       const st = a.status === EXC ? 'ex' : 'ab';
       const stCell = d.canEdit
@@ -827,7 +826,7 @@ function renderAbsent(f) {
         : `<span class="chip ${st}">${esc(a.status)}</span>`;
       const link = waLink(a.phone, `السلام عليكم ورحمة الله\nولي أمر الطالب: ${a.name}\nنفيدكم بغياب ابنكم يوم ${dLabel(d.date)}.\n${S.school}`);
       return `<tr><td>${esc(a.name)}</td><td>${esc(a.cls)}</td><td>${a.total} <span class="muted">(بدون عذر ${a.unexcused})</span></td>
-        <td>${stCell}</td><td>${link ? `<a class="wa" href="${esc(link)}" target="_blank" rel="noopener noreferrer">واتساب</a>` : '<span class="muted">لا يوجد رقم</span>'}</td></tr>`;
+        <td>${stCell}</td></tr>`;
     }).join('')}</tbody></table></div>`;
 }
 
@@ -854,11 +853,10 @@ async function loadAlerts() {
       const items = d.lateList.filter(x => x.level === l);
       if (!items.length) return '';
       return `<div class="panel"><h3>تأخر صباحي: ${l} مرات فأكثر (${items.length})</h3><div class="tbl-wrap"><table>
-        <thead><tr><th>الطالب</th><th>الفصل</th><th>مرات التأخر</th><th>ولي الأمر</th></tr></thead><tbody>
+        <thead><tr><th>الطالب</th><th>الفصل</th><th>مرات التأخر</th></tr></thead><tbody>
         ${items.map(x => {
           const link = waLink(x.phone, `السلام عليكم ورحمة الله\nولي أمر الطالب: ${x.name}\nنفيدكم بأن تأخر ابنكم صباحًا بلغ ${x.late} مرات منذ بداية الفصل الدراسي، ونأمل الحرص على حضوره مبكرًا.\n${S.school}`);
-          return `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td><span class="chip lt">${x.late}</span></td>
-            <td>${link ? `<a class="wa" href="${esc(link)}" target="_blank" rel="noopener noreferrer">واتساب</a>` : '<span class="muted">لا يوجد رقم</span>'}</td></tr>`;
+          return `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td><span class="chip lt">${x.late}</span></td></tr>`;
         }).join('')}</tbody></table></div></div>`;
     }).join('');
     if (!d.list.length) { b.innerHTML = '<div class="panel"><p class="muted" style="margin:0">لا يوجد طلاب بلغوا ' + d.levels[0] + ' أيام غياب بدون عذر.</p></div>' + lateHtml; return; }
@@ -867,11 +865,10 @@ async function loadAlerts() {
       const items = d.list.filter(x => x.level === l);
       if (!items.length) return '';
       return `<div class="panel"><h3>${l} أيام فأكثر بدون عذر (${items.length})</h3><div class="tbl-wrap"><table>
-        <thead><tr><th>الطالب</th><th>الفصل</th><th>بدون عذر</th><th>الإجمالي</th><th>ولي الأمر</th></tr></thead><tbody>
+        <thead><tr><th>الطالب</th><th>الفصل</th><th>بدون عذر</th><th>الإجمالي</th></tr></thead><tbody>
         ${items.map(x => {
           const link = waLink(x.phone, `السلام عليكم ورحمة الله\nولي أمر الطالب: ${x.name}\nنفيدكم بأن غياب ابنكم بدون عذر بلغ ${x.unexcused} أيام منذ بداية الفصل الدراسي، ونأمل مراجعة المدرسة.\n${S.school}`);
-          return `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td><span class="chip ab">${x.unexcused}</span></td><td>${x.total}</td>
-            <td>${link ? `<a class="wa" href="${esc(link)}" target="_blank" rel="noopener noreferrer">واتساب</a>` : '<span class="muted">لا يوجد رقم</span>'}</td></tr>`;
+          return `<tr><td>${esc(x.name)}</td><td>${esc(x.cls)}</td><td><span class="chip ab">${x.unexcused}</span></td><td>${x.total}</td></tr>`;
         }).join('')}</tbody></table></div></div>`;
     }).join('') + lateHtml;
   } catch (e) { b.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
